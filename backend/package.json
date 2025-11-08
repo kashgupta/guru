@@ -1,0 +1,24 @@
+{
+  "name": "guru-backend",
+  "version": "1.0.0",
+  "description": "Backend agent service for healthcare, financial, and legal guidance for immigrants",
+  "type": "module",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js",
+    "dev": "node agent.js"
+  },
+  "keywords": [
+    "claude",
+    "agents",
+    "healthcare",
+    "financial",
+    "legal"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.30"
+  }
+}
+
