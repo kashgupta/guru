@@ -131,8 +131,8 @@ export function ChatInterface() {
       {/* Header */}
       <div className="flex items-center justify-between py-4 border-b border-border">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">AI Chatbot</h1>
-          <p className="text-sm text-muted-foreground">Powered by Claude</p>
+          <h1 className="text-2xl font-semibold text-foreground">Guru</h1>
+          <p className="text-sm text-muted-foreground">Here to answer your questions and help you navigate the healthcare system</p>
         </div>
         {isSpeaking && (
           <Button variant="outline" size="icon" onClick={stopSpeaking} className="rounded-full bg-transparent">
@@ -146,7 +146,7 @@ export function ChatInterface() {
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <Card className="p-8 bg-card text-center max-w-md">
-              <h2 className="text-xl font-semibold mb-2 text-card-foreground">Welcome to AI Chat</h2>
+              <h2 className="text-md mb-2 text-card-foreground">Welcome to Guru</h2>
               <p className="text-muted-foreground">
                 Start a conversation by typing a message or using the voice button
               </p>
