@@ -1,4 +1,6 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 /**
  * Advanced example showing:
@@ -11,13 +13,14 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 // Define custom agents for different domains
 const agents = {
   healthcare: {
-    description: 'A healthcare advisor specializing in helping immigrants navigate the US healthcare system',
+    description: 'A healthcare advisor specializing in helping immigrants navigate the US healthcare system, including medical bill negotiation',
     prompt: `You are a compassionate healthcare advisor helping immigrants understand:
 - How to find affordable healthcare options
 - Understanding health insurance in the US
 - Finding community health centers
 - Emergency healthcare procedures
 - Preventive care and vaccinations
+- Medical bill negotiation and financial assistance
 Always provide clear, actionable advice in simple language.`,
     model: 'sonnet',
   },
@@ -61,10 +64,15 @@ async function runAgent(agentName, userPrompt, options = {}) {
   }
 
   try {
+    // Set cwd to project root to access .claude/skills directory
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const projectRoot = join(__dirname, '..');
+    
     const agentQuery = query({
       prompt: userPrompt,
       options: {
-        cwd: process.cwd(),
+        cwd: projectRoot,
         agents: {
           [agentName]: agent,
         },
@@ -150,10 +158,15 @@ User question: "${userPrompt}"
 Respond with ONLY one word: "healthcare", "financial", or "legal". Do not include any explanation or additional text.`;
 
   try {
+    // Set cwd to project root to access .claude/skills directory
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const projectRoot = join(__dirname, '..');
+    
     const routingQuery = query({
       prompt: routingPrompt,
       options: {
-        cwd: process.cwd(),
+        cwd: projectRoot,
         model: 'sonnet',
         maxTurns: 1,
       },
