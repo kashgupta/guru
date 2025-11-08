@@ -45,11 +45,15 @@ Always clarify that you provide general information, not legal advice, and recom
   },
 };
 
-async function runAgent(agentName, userPrompt) {
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`🤖 ${agentName.toUpperCase()} AGENT`);
-  console.log('='.repeat(60));
-  console.log(`User: ${userPrompt}\n`);
+async function runAgent(agentName, userPrompt, options = {}) {
+  const { silent = false } = options;
+  
+  if (!silent) {
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`🤖 ${agentName.toUpperCase()} AGENT`);
+    console.log('='.repeat(60));
+    console.log(`User: ${userPrompt}\n`);
+  }
 
   const agent = agents[agentName];
   if (!agent) {
@@ -76,6 +80,7 @@ async function runAgent(agentName, userPrompt) {
     });
 
     let lastAssistantMessage = null;
+    let resultData = null;
 
     for await (const message of agentQuery) {
       switch (message.type) {
@@ -83,7 +88,9 @@ async function runAgent(agentName, userPrompt) {
           if (message.message.content) {
             for (const content of message.message.content) {
               if (content.type === 'text') {
-                console.log(`💬 ${agentName} Advisor: ${content.text}\n`);
+                if (!silent) {
+                  console.log(`💬 ${agentName} Advisor: ${content.text}\n`);
+                }
                 lastAssistantMessage = content.text;
               }
             }
@@ -91,60 +98,92 @@ async function runAgent(agentName, userPrompt) {
           break;
 
         case 'result':
-          if (message.subtype === 'success') {
-            console.log(`✅ Completed (${message.duration_ms}ms, $${message.total_cost_usd.toFixed(4)})`);
-          } else {
-            console.log(`❌ Error: ${message.errors?.join(', ')}`);
+          resultData = {
+            success: message.subtype === 'success',
+            duration_ms: message.duration_ms,
+            cost_usd: message.total_cost_usd,
+            usage: message.usage,
+            errors: message.errors,
+          };
+          if (!silent) {
+            if (message.subtype === 'success') {
+              console.log(`✅ Completed (${message.duration_ms}ms, $${message.total_cost_usd.toFixed(4)})`);
+            } else {
+              console.log(`❌ Error: ${message.errors?.join(', ')}`);
+            }
           }
           break;
 
         case 'tool_progress':
-          console.log(`⚙️  ${message.tool_name}...`);
+          if (!silent) {
+            console.log(`⚙️  ${message.tool_name}...`);
+          }
           break;
       }
     }
 
-    return lastAssistantMessage;
+    return {
+      response: lastAssistantMessage,
+      agent: agentName,
+      ...resultData,
+    };
   } catch (error) {
     console.error(`❌ Error with ${agentName} agent:`, error.message);
     throw error;
   }
 }
 
-async function advancedExample() {
-  console.log('🚀 Advanced Claude Agent SDK Example\n');
-  console.log('This example demonstrates custom agents for different domains.\n');
+/**
+ * Routes a user prompt to the most appropriate agent
+ * Uses Claude to determine which agent (healthcare, financial, or legal) is best suited
+ */
+async function routeToAgent(userPrompt) {
+  const routingPrompt = `You are a routing assistant. Analyze the following user question and determine which specialized agent should handle it.
 
-  // Example 1: Healthcare question
-  await runAgent(
-    'healthcare',
-    'I just moved to the US and need health insurance. What are my options?'
-  );
+Available agents:
+1. healthcare - For questions about health insurance, medical care, healthcare access, vaccinations, emergency care, preventive care
+2. financial - For questions about banking, credit, taxes, budgeting, financial planning, opening accounts
+3. legal - For questions about immigration paperwork, visas, legal rights, document requirements, legal processes
 
-  // Example 2: Financial question
-  await runAgent(
-    'financial',
-    'How do I build credit as a new immigrant with no credit history?'
-  );
+User question: "${userPrompt}"
 
-  // Example 3: Legal question
-  await runAgent(
-    'legal',
-    'What documents do I need to renew my work visa?'
-  );
+Respond with ONLY one word: "healthcare", "financial", or "legal". Do not include any explanation or additional text.`;
 
-  console.log('\n' + '='.repeat(60));
-  console.log('✨ All examples completed!');
-  console.log('='.repeat(60));
+  try {
+    const routingQuery = query({
+      prompt: routingPrompt,
+      options: {
+        cwd: process.cwd(),
+        model: 'sonnet',
+        maxTurns: 1,
+      },
+    });
+
+    let routingResponse = null;
+    for await (const message of routingQuery) {
+      if (message.type === 'assistant' && message.message.content) {
+        for (const content of message.message.content) {
+          if (content.type === 'text') {
+            routingResponse = content.text.trim().toLowerCase();
+          }
+        }
+      }
+    }
+
+    // Validate and normalize the response
+    const validAgents = ['healthcare', 'financial', 'legal'];
+    const selectedAgent = validAgents.find(agent => 
+      routingResponse?.includes(agent)
+    ) || 'healthcare'; // Default to healthcare if unclear
+
+    return selectedAgent;
+  } catch (error) {
+    console.error('Error routing to agent:', error.message);
+    // Default to healthcare on error
+    return 'healthcare';
+  }
 }
 
-// Run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  advancedExample().catch((error) => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
-}
 
-export { runAgent, agents };
+export { runAgent, agents, routeToAgent };
 

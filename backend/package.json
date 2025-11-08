@@ -5,8 +5,8 @@
   "type": "module",
   "main": "agent.js",
   "scripts": {
-    "start": "node agent.js",
-    "dev": "node agent.js"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "keywords": [
     "claude",
@@ -18,7 +18,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.1.30"
+    "@anthropic-ai/claude-agent-sdk": "^0.1.30",
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
   }
 }
-
