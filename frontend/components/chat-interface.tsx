@@ -1,32 +1,34 @@
 "use client"
 
 import type React from "react"
-
-import { useChat } from "@ai-sdk/react"
-import { DefaultChatTransport } from "ai"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Mic, MicOff, Send, VolumeX } from "lucide-react"
 
+interface Message {
+  id: string
+  role: "user" | "assistant"
+  content: string
+}
+
 export function ChatInterface() {
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [recognition, setRecognition] = useState<any>(null)
   const [synthesis, setSynthesis] = useState<SpeechSynthesis | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
-  })
-
   // Initialize speech recognition and synthesis
   useEffect(() => {
     if (typeof window !== "undefined") {
       // Speech Recognition
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
 
       if (SpeechRecognition) {
         const recognitionInstance = new SpeechRecognition()
@@ -36,6 +38,7 @@ export function ChatInterface() {
 
         recognitionInstance.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript
+          console.log("Speech recognition result:", transcript)
           setInput(transcript)
           setIsListening(false)
         }
@@ -66,17 +69,14 @@ export function ChatInterface() {
 
   // Speak the last assistant message
   useEffect(() => {
-    if (synthesis && messages.length > 0) {
+    if (synthesis && messages.length > 0 && !isLoading) {
       const lastMessage = messages[messages.length - 1]
-      if (lastMessage.role === "assistant" && lastMessage.parts) {
-        const textParts = lastMessage.parts.filter((part: any) => part.type === "text")
-        if (textParts.length > 0 && status !== "in_progress") {
-          const text = textParts.map((part: any) => part.text).join(" ")
-          speakText(text)
-        }
+      if (lastMessage.role === "assistant") {
+        console.log("Speaking assistant message:", lastMessage.content.substring(0, 50))
+        speakText(lastMessage.content)
       }
     }
-  }, [messages, status, synthesis])
+  }, [messages, isLoading, synthesis])
 
   const toggleListening = () => {
     if (!recognition) {
@@ -118,12 +118,80 @@ export function ChatInterface() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || status === "in_progress") return
+    if (!input.trim() || isLoading) return
 
-    sendMessage({ text: input })
+    const userMessage = input.trim()
+    console.log("=== User sent message ===")
+    console.log("Message:", userMessage)
+
+    // Add user message to UI
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: userMessage,
+    }
+    setMessages((prev) => [...prev, userMsg])
     setInput("")
+    setIsLoading(true)
+
+    try {
+      console.log("Calling /api/chat endpoint...")
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [
+            ...messages.map((msg) => ({
+              role: msg.role,
+              content: msg.content,
+            })),
+            {
+              role: "user",
+              content: userMessage,
+            },
+          ],
+        }),
+      })
+
+      console.log("API Response status:", response.status)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error("API Error:", errorData)
+        throw new Error(errorData.error || "Failed to get response")
+      }
+
+      const data = await response.json()
+      console.log("API Response received:")
+      console.log("- Success:", data.success)
+      console.log("- Message length:", data.message?.length || 0)
+      console.log("- Agent:", data.agent)
+
+      // Add assistant message to UI
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.message || "No response received",
+      }
+      setMessages((prev) => [...prev, assistantMsg])
+      console.log("Message added to UI")
+    } catch (error) {
+      console.error("Error sending message:", error)
+      const errorMsg: Message = {
+        id: (Date.now() + 2).toString(),
+        role: "assistant",
+        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+      }
+      setMessages((prev) => [...prev, errorMsg])
+    } finally {
+      setIsLoading(false)
+      console.log("=== Request complete ===")
+    }
   }
 
   return (
@@ -132,10 +200,17 @@ export function ChatInterface() {
       <div className="flex items-center justify-between py-4 border-b border-border">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Guru</h1>
-          <p className="text-sm text-muted-foreground">Here to answer your questions and help you navigate the healthcare system</p>
+          <p className="text-sm text-muted-foreground">
+            Here to answer your questions and help you navigate the healthcare system
+          </p>
         </div>
         {isSpeaking && (
-          <Button variant="outline" size="icon" onClick={stopSpeaking} className="rounded-full bg-transparent">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={stopSpeaking}
+            className="rounded-full bg-transparent"
+          >
             <VolumeX className="h-4 w-4" />
           </Button>
         )}
@@ -155,10 +230,15 @@ export function ChatInterface() {
         )}
 
         {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div
+            key={message.id}
+            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+          >
             <Card
               className={`max-w-[80%] p-4 ${
-                message.role === "user" ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground"
+                message.role === "user"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-card-foreground"
               }`}
             >
               <div className="flex items-start gap-2">
@@ -167,24 +247,17 @@ export function ChatInterface() {
                     <span className="text-xs font-semibold text-accent-foreground">AI</span>
                   </div>
                 )}
-                <div className="flex-1 space-y-2">
-                  {message.parts?.map((part: any, index: number) => {
-                    if (part.type === "text") {
-                      return (
-                        <p key={index} className="text-sm leading-relaxed whitespace-pre-wrap">
-                          {part.text}
-                        </p>
-                      )
-                    }
-                    return null
-                  })}
+                <div className="flex-1">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {message.content}
+                  </p>
                 </div>
               </div>
             </Card>
           </div>
         ))}
 
-        {status === "in_progress" && (
+        {isLoading && (
           <div className="flex justify-start">
             <Card className="max-w-[80%] p-4 bg-card">
               <div className="flex items-center gap-2">
@@ -212,7 +285,7 @@ export function ChatInterface() {
           size="icon"
           onClick={toggleListening}
           className="flex-shrink-0 rounded-full"
-          disabled={status === "in_progress"}
+          disabled={isLoading}
         >
           {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
         </Button>
@@ -221,13 +294,13 @@ export function ChatInterface() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={isListening ? "Listening..." : "Type your message..."}
-          disabled={status === "in_progress" || isListening}
+          disabled={isLoading || isListening}
           className="flex-1"
         />
 
         <Button
           type="submit"
-          disabled={!input.trim() || status === "in_progress"}
+          disabled={!input.trim() || isLoading}
           className="flex-shrink-0 rounded-full"
           size="icon"
         >

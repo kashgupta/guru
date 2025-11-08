@@ -1,101 +1,74 @@
-import type { UIMessage } from "ai"
-
 export const maxDuration = 30
 
-// Extract the last user message from the conversation history
-function getLatestUserPrompt(messages: UIMessage[]): string {
-  // Find the last message from the user
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].role === "user") {
-      const parts = messages[i].parts || []
-      const textPart = parts.find(p => p.type === "text")
-      if (textPart && textPart.type === "text") {
-        return textPart.text
-      }
-    }
-  }
-  return ""
-}
-
 export async function POST(req: Request) {
-  const { messages }: { messages: UIMessage[] } = await req.json()
-
-  // Extract the latest user prompt
-  const prompt = getLatestUserPrompt(messages)
-
-  if (!prompt) {
-    return Response.json(
-      { error: "No user message found" },
-      { status: 400 }
-    )
-  }
+  console.log("=== API Route: POST /api/chat ===")
 
   try {
-    // Call the backend API
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:3001"
-    const backendResponse = await fetch(`${backendUrl}/api/chat`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ prompt }),
-    })
+    const body = await req.json()
+    const { messages } = body
 
-    if (!backendResponse.ok) {
-      const error = await backendResponse.json()
-      return Response.json(error, { status: backendResponse.status })
+    console.log("Received request with", messages?.length || 0, "messages")
+
+    // Extract the last user message
+    let userPrompt = ""
+    if (messages && Array.isArray(messages)) {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === "user") {
+          if (typeof messages[i].content === "string") {
+            userPrompt = messages[i].content
+          }
+          break
+        }
+      }
     }
 
-    const data = await backendResponse.json()
+    if (!userPrompt) {
+      console.log("No user prompt found")
+      return Response.json(
+        { error: "No user message found" },
+        { status: 400 }
+      )
+    }
 
-    // Transform backend response to streaming format compatible with useChat
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          // Send the assistant response in chunks
-          const responseText = data.response
-          const chunkSize = 50
+    console.log("User prompt:", userPrompt)
 
-          // Send text chunks
-          for (let i = 0; i < responseText.length; i += chunkSize) {
-            const chunk = responseText.slice(i, i + chunkSize)
-            const event = `data: ${JSON.stringify({
-              type: "text-delta",
-              text: chunk,
-            })}\n\n`
+    // Call backend API
+    const backendUrl = process.env.BACKEND_URL || "http://localhost:3001"
+    console.log("Calling backend:", backendUrl)
 
-            controller.enqueue(new TextEncoder().encode(event))
-            // Small delay for streaming effect
-            await new Promise(resolve => setTimeout(resolve, 5))
-          }
-
-          // Send message finish event
-          const finishEvent = `data: ${JSON.stringify({
-            type: "message-finish",
-            finishReason: "stop",
-          })}\n\n`
-          controller.enqueue(new TextEncoder().encode(finishEvent))
-
-          controller.close()
-        } catch (error) {
-          console.error("Stream error:", error)
-          controller.error(error)
-        }
-      },
+    const backendRes = await fetch(`${backendUrl}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: userPrompt }),
     })
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream; charset=utf-8",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "Transfer-Encoding": "chunked",
-      },
+    console.log("Backend status:", backendRes.status)
+
+    if (!backendRes.ok) {
+      const error = await backendRes.json().catch(() => ({}))
+      console.log("Backend error:", error)
+      return Response.json(
+        { error: "Backend error", details: error },
+        { status: backendRes.status }
+      )
+    }
+
+    const backendData = await backendRes.json()
+    console.log("Backend response received, response length:", backendData.response?.length || 0)
+
+    // Return response directly as JSON
+    return Response.json({
+      success: true,
+      message: backendData.response,
+      agent: backendData.agent,
     })
   } catch (error) {
-    console.error("Error calling backend:", error)
+    console.error("API Error:", error)
     return Response.json(
-      { error: "Failed to reach backend server", details: String(error) },
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     )
   }
