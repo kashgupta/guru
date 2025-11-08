@@ -1,0 +1,202 @@
+'use client'
+
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { RealtimeAgent, RealtimeSession } from '@openai/agents/realtime'
+import type { VoiceAgentProps, TranscriptItem, ConnectionStatus } from './types'
+
+export function useVoiceAgent(props: VoiceAgentProps) {
+  const [status, setStatus] = useState<ConnectionStatus>('disconnected')
+  const [transcript, setTranscript] = useState<TranscriptItem[]>([])
+  const [audioIntensity, setAudioIntensity] = useState(0.3)
+
+  const sessionRef = useRef<RealtimeSession | null>(null)
+  const waveIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Merge prompt with context
+  const instructions = props.context
+    ? `${props.prompt}\n\nAdditional Context:\n${props.context}`
+    : props.prompt
+
+  // Add transcript item
+  const addTranscript = useCallback((speaker: 'user' | 'assistant', message: string) => {
+    const item: TranscriptItem = {
+      speaker,
+      message,
+      timestamp: new Date()
+    }
+    setTranscript(prev => [...prev, item])
+
+    // Call callback if provided
+    props.onTranscript?.(speaker, message)
+  }, [props])
+
+  // Connect to OpenAI Realtime API
+  const connect = useCallback(async () => {
+    try {
+      setStatus('connecting')
+      console.log('🟢 Step 1: Fetching ephemeral token from server...')
+
+      // Fetch ephemeral token from API
+      const response = await fetch('/api/voice-agent')
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ Server error:', errorText)
+        throw new Error(`Failed to get session token: ${response.status} ${errorText}`)
+      }
+      const data = await response.json()
+      const apiKey = data.client_secret || data.apiKey
+
+      console.log('🟢 Step 2: Ephemeral token received')
+      console.log('Token starts with "ek_":', apiKey?.startsWith('ek_'))
+      console.log('Token length:', apiKey?.length)
+      console.log('Token preview:', apiKey?.substring(0, 20) + '...')
+
+      if (!apiKey || !apiKey.startsWith('ek_')) {
+        console.error('❌ Invalid token format! Expected token starting with "ek_"')
+        throw new Error('Invalid ephemeral token format')
+      }
+
+      console.log('🟢 Step 3: Creating RealtimeAgent...')
+
+      // Create RealtimeAgent
+      const agent = new RealtimeAgent({
+        name: 'Assistant',
+        instructions,
+      })
+
+      console.log('🟢 Step 4: Creating RealtimeSession...')
+
+      // Create RealtimeSession
+      const session = new RealtimeSession(agent)
+      sessionRef.current = session
+
+      console.log('🟢 Step 5: Connecting session with ephemeral token...')
+      console.log('⚠️ Overriding URL to use /v1/realtime instead of /v1/realtime/calls (SDK bug workaround)')
+
+      // Connect using the ephemeral token
+      // CRITICAL: URL override to fix known bug in @openai/agents 0.1.x
+      await session.connect({
+        apiKey,
+        url: 'https://api.openai.com/v1/realtime'
+      })
+
+      setStatus('connected')
+      props.onConnected?.()
+
+      // Start wave animation
+      setAudioIntensity(0.3)
+
+      // Listen for conversation updates
+      session.on('input_audio_buffer.speech_started', () => {
+        console.log('User started speaking')
+        setAudioIntensity(0.8)
+      })
+
+      session.on('input_audio_buffer.speech_stopped', () => {
+        console.log('User stopped speaking')
+        setAudioIntensity(0.3)
+      })
+
+      session.on('conversation.item.created', (event: any) => {
+        const item = event.item
+        if (item.role === 'user' && item.type === 'message') {
+          console.log('User message:', item)
+        }
+      })
+
+      session.on('response.audio_transcript.done', (event: any) => {
+        // Assistant's response transcript
+        if (event.transcript) {
+          addTranscript('assistant', event.transcript)
+        }
+      })
+
+      session.on('conversation.item.input_audio_transcription.completed', (event: any) => {
+        // User's speech transcript
+        if (event.transcript) {
+          addTranscript('user', event.transcript)
+        }
+      })
+
+      session.on('response.audio.delta', () => {
+        // Assistant is speaking
+        setAudioIntensity(0.9)
+      })
+
+      session.on('response.audio.done', () => {
+        // Assistant finished speaking
+        setAudioIntensity(0.3)
+      })
+
+      session.on('error', (error: any) => {
+        console.error('Session error:', error)
+        addTranscript('assistant', `Error: ${error.message}`)
+        props.onError?.(error)
+      })
+
+      console.log('🟢 Step 6: Connection successful!')
+
+      // Add initial message if provided
+      if (props.initialMessage) {
+        addTranscript('assistant', props.initialMessage)
+      }
+
+    } catch (error) {
+      console.error('❌ Connection error:', error)
+      console.error('Error name:', (error as Error).name)
+      console.error('Error message:', (error as Error).message)
+      console.error('Error stack:', (error as Error).stack)
+
+      setStatus('disconnected')
+
+      let errorMsg = (error as Error).message
+      if (errorMsg.includes('setRemoteDescription')) {
+        errorMsg = 'WebRTC connection failed. Check console for details.'
+        console.error('⚠️ This error usually means:')
+        console.error('1. The ephemeral token might be expired (60 second validity)')
+        console.error('2. The SDP response from OpenAI is malformed')
+        console.error('3. There may be a network/CORS issue')
+        console.error('4. Your API key may not have Realtime API access')
+      }
+
+      props.onError?.(new Error(errorMsg))
+    }
+  }, [instructions, props, addTranscript])
+
+  // Disconnect from session
+  const disconnect = useCallback(async () => {
+    if (sessionRef.current) {
+      await sessionRef.current.disconnect()
+      sessionRef.current = null
+    }
+
+    if (waveIntervalRef.current) {
+      clearInterval(waveIntervalRef.current)
+      waveIntervalRef.current = null
+    }
+
+    setAudioIntensity(0)
+    setStatus('disconnected')
+    props.onDisconnected?.()
+  }, [props])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (sessionRef.current) {
+        sessionRef.current.disconnect()
+      }
+      if (waveIntervalRef.current) {
+        clearInterval(waveIntervalRef.current)
+      }
+    }
+  }, [])
+
+  return {
+    status,
+    transcript,
+    audioIntensity,
+    connect,
+    disconnect,
+  }
+}
