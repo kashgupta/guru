@@ -1,6 +1,5 @@
-# OpenAI Voice Agent - Browser Implementation
-
-A browser-based speech-to-speech voice agent using OpenAI's Realtime API with WebRTC. This implementation follows OpenAI's recommended architecture for building interactive voice agents.
+# guru
+Healthcare guru, financial guru, legal guru for immigrants who are new to the system
 
 ## Features
 
@@ -9,151 +8,121 @@ A browser-based speech-to-speech voice agent using OpenAI's Realtime API with We
 - **Real-time Transcription**: See what you and the AI are saying
 - **Audio Visualization**: Visual feedback during conversation
 - **Secure API Key Handling**: Server-side token generation keeps your API key safe
+- **Multi-Agent Support**: Custom agents for healthcare, financial, and legal domains
 
-## Architecture
+## Project Structure
 
-This application uses the **speech-to-speech (S2S) architecture** which:
-- Directly processes audio inputs and outputs
-- Handles speech in real-time with a single multimodal model
-- Understands emotion, intent, and filters out noise
-- Responds naturally without relying on text transcripts
+This project consists of two parts:
+
+### Frontend (Next.js)
+A Next.js application with a chat interface for interacting with the agents.
+
+**Setup:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Backend (Claude Agents SDK)
+A Node.js backend service using Claude Agents SDK with custom agents for healthcare, financial, and legal domains.
+
+**Setup:**
+```bash
+cd backend
+npm install
+export ANTHROPIC_API_KEY=your_api_key_here
+npm start
+```
+
+See the [backend README](./backend/README.md) for more details.
 
 ## Prerequisites
 
 - Node.js 18+ installed
-- OpenAI API key with access to Realtime API
+- OpenAI API key with access to Realtime API (for voice features)
+- Anthropic API key (for Claude agents)
 - Modern browser with WebRTC support (Chrome, Firefox, Safari, Edge)
-- Microphone access
+- Microphone access (for voice features)
 
 ## Setup
 
 ### 1. Install Dependencies
 
+For the root project:
 ```bash
+npm install
+```
+
+For frontend:
+```bash
+cd frontend
+npm install
+```
+
+For backend:
+```bash
+cd backend
 npm install
 ```
 
 ### 2. Configure Environment Variables
 
-Create a `.env` file from the example:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and add your OpenAI API key:
-
+Create a `.env` file in the root directory:
 ```env
 OPENAI_API_KEY=sk-proj-your-actual-api-key-here
 API_PORT=3001
 ```
 
-Get your API key from: https://platform.openai.com/api-keys
+For backend, set:
+```bash
+export ANTHROPIC_API_KEY=your_api_key_here
+```
 
 ### 3. Start the Application
 
-Run both the Vite dev server and API server with one command:
-
+**Frontend:**
 ```bash
+cd frontend
+npm run dev
+```
+
+**Backend:**
+```bash
+cd backend
 npm start
 ```
 
-This will start:
-- Vite dev server on `http://localhost:5173`
-- API server on `http://localhost:3001`
-
-If you prefer to run them separately:
-- **Terminal 1:** `npm run dev` (Vite)
-- **Terminal 2:** `npm run server` (API)
-
-### 4. Open in Browser
-
-Navigate to: http://localhost:5173
-
 ## Usage
 
-1. Click the **Connect** button to establish connection with OpenAI's Realtime API
-2. Allow microphone access when prompted by your browser
-3. Start speaking naturally - the AI will respond in real-time
-4. The conversation transcript will appear in the interface
-5. Click **Disconnect** when you're done
+1. Start both frontend and backend services
+2. Navigate to the frontend URL (typically http://localhost:3000)
+3. Use the chat interface to interact with healthcare, financial, or legal agents
+4. For voice features, click the **Connect** button to establish connection with OpenAI's Realtime API
 
-## How It Works
+## Architecture
 
-### Client-Side (Browser)
-- `index.html`: User interface with controls and visualization
-- `app.js`: RealtimeAgent setup and event handling using `@openai/agents`
-- Automatically uses WebRTC for low-latency browser communication
-
-### Server-Side (Node.js)
-- `server.js`: Express server that:
-  - Serves static files
-  - Generates ephemeral tokens for secure API access
-  - Keeps your API key private (never exposed to browser)
-
-### Security
-The server creates ephemeral session tokens using the OpenAI Realtime Sessions API. Your API key never leaves the server or gets exposed to the browser.
+This application uses:
+- **Next.js** for the frontend with a modern chat interface
+- **Claude Agents SDK** for domain-specific agent responses
+- **OpenAI Realtime API** for voice interactions (optional)
+- **WebRTC** for low-latency browser communication
 
 ## Customization
 
 ### Modify Agent Personality
 
-Edit the `instructions` in `app.js:85-120` to customize:
+Edit the agent instructions in the backend to customize:
 - Identity and character
 - Tone and demeanor
 - Formality level
-- Use of filler words
-- Response pacing
-
-Example:
-```javascript
-instructions: `You are a helpful coding tutor.
-
-# Personality and Tone
-## Identity
-You are an experienced software engineer who loves teaching.
-
-## Task
-Help students learn programming concepts through clear explanations.
-
-## Tone
-Patient and encouraging
-...`
-```
+- Domain-specific knowledge
 
 ### Change Voice
 
-In `server.js:34`, modify the `voice` parameter:
+Modify the `voice` parameter in voice agent configuration:
 ```javascript
 voice: 'verse',  // Options: alloy, echo, fable, onyx, nova, shimmer, verse
-```
-
-### Adjust Turn Detection
-
-In `server.js:39-44`, tune the Voice Activity Detection (VAD):
-```javascript
-turn_detection: {
-    type: 'server_vad',
-    threshold: 0.5,              // Sensitivity (0.0-1.0)
-    prefix_padding_ms: 300,      // Include audio before speech
-    silence_duration_ms: 500     // Wait time before turn ends
-}
-```
-
-### Add Function Tools
-
-You can extend the agent with custom tools. See the [OpenAI documentation](https://platform.openai.com/docs/guides/voice-agents) for examples.
-
-## Project Structure
-
-```
-.
-├── index.html          # User interface
-├── app.js              # Client-side agent logic
-├── server.js           # Express server & API proxy
-├── package.json        # Dependencies
-├── .env.example        # Environment template
-└── README.md           # This file
 ```
 
 ## Troubleshooting
@@ -161,34 +130,22 @@ You can extend the agent with custom tools. See the [OpenAI documentation](https
 ### "OPENAI_API_KEY not configured"
 Make sure you've created a `.env` file with your API key.
 
+### "ANTHROPIC_API_KEY not configured"
+Make sure you've exported the environment variable for the backend.
+
 ### No microphone access
 Check browser permissions and ensure you're using HTTPS or localhost.
 
 ### Connection fails
-- Verify your API key is valid
-- Check that you have access to the Realtime API
+- Verify your API keys are valid
+- Check that you have access to the required APIs
 - Ensure you're not hitting rate limits
-
-### Audio issues
-- Check microphone is working in browser settings
-- Try a different browser
-- Ensure no other app is using the microphone
 
 ## Resources
 
 - [OpenAI Voice Agents Guide](https://platform.openai.com/docs/guides/voice-agents)
 - [Realtime API Reference](https://platform.openai.com/docs/api-reference/realtime)
-- [OpenAI Agents SDK](https://openai.github.io/openai-agents-js/)
-- [Example Applications](https://github.com/openai/openai-realtime-api-beta)
-
-## API Costs
-
-The Realtime API pricing includes:
-- Audio input/output
-- Text tokens
-- Transcription (if enabled)
-
-Check current pricing: https://openai.com/api/pricing/
+- [Claude Agents SDK Documentation](https://docs.claude.com/en/api/agent-sdk/overview)
 
 ## License
 
