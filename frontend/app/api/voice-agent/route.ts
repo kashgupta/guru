@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+export const runtime = 'nodejs'
 export const maxDuration = 30
 
 // API endpoint to create ephemeral token for OpenAI Realtime API
