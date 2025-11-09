@@ -6,7 +6,9 @@
       "WebFetch(domain:github.com)",
       "Bash(npm start)",
       "Bash(npm run dev:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(npm run build:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

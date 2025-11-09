@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '../ui/dialog'
 import { Button } from '../ui/button'
-import { Mic, MicOff, Power } from 'lucide-react'
+import { Mic, MicOff, Power, Phone, PhoneOff, Sparkles } from 'lucide-react'
 
 interface VoiceAgentDialogProps extends VoiceAgentProps {
   open: boolean
@@ -49,79 +49,116 @@ export function VoiceAgentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Voice Agent</DialogTitle>
-          <DialogDescription>
-            Have a voice conversation with the AI assistant
-          </DialogDescription>
+      <DialogContent className="sm:max-w-[650px] bg-gradient-to-br from-card/95 to-card/90 backdrop-blur">
+        <DialogHeader className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-primary to-primary/70 rounded-xl shadow-lg">
+              <Sparkles className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <div>
+              <DialogTitle className="text-2xl">Voice Assistant</DialogTitle>
+              <DialogDescription className="text-base">
+                Have a natural voice conversation with Guru
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-6 py-4">
           {/* Status indicator */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div
-                className={`h-3 w-3 rounded-full ${
-                  status === 'connected'
-                    ? 'bg-green-500 animate-pulse'
+          <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border/50">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div
+                  className={`h-4 w-4 rounded-full ${
+                    status === 'connected'
+                      ? 'bg-green-500 animate-pulse shadow-lg shadow-green-500/50'
+                      : status === 'connecting'
+                      ? 'bg-yellow-500 animate-pulse shadow-lg shadow-yellow-500/50'
+                      : 'bg-muted-foreground/40'
+                  }`}
+                />
+                {status === 'connected' && (
+                  <div className="absolute inset-0 h-4 w-4 rounded-full bg-green-500 animate-ping opacity-75" />
+                )}
+              </div>
+              <div>
+                <span className="text-sm font-semibold">
+                  {status === 'connected'
+                    ? 'Connected'
                     : status === 'connecting'
-                    ? 'bg-yellow-500 animate-pulse'
-                    : 'bg-gray-400'
-                }`}
-              />
-              <span className="text-sm font-medium">
-                {status === 'connected'
-                  ? 'Connected - Start speaking!'
-                  : status === 'connecting'
-                  ? 'Connecting...'
-                  : 'Disconnected'}
-              </span>
+                    ? 'Connecting...'
+                    : 'Disconnected'}
+                </span>
+                <p className="text-xs text-muted-foreground">
+                  {status === 'connected'
+                    ? 'Start speaking anytime'
+                    : status === 'connecting'
+                    ? 'Establishing connection...'
+                    : 'Ready to connect'}
+                </p>
+              </div>
             </div>
 
             {/* Controls */}
             <div className="flex gap-2">
-              <Button
-                variant={status === 'connected' ? 'outline' : 'default'}
-                size="sm"
-                onClick={handleConnect}
-                disabled={status !== 'disconnected'}
-              >
-                <Mic className="h-4 w-4 mr-2" />
-                Connect
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDisconnect}
-                disabled={status !== 'connected'}
-              >
-                <Power className="h-4 w-4 mr-2" />
-                Disconnect
-              </Button>
+              {status === 'disconnected' ? (
+                <Button
+                  variant="default"
+                  size="lg"
+                  onClick={handleConnect}
+                  className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg transition-all hover:scale-105 gap-2"
+                >
+                  <Phone className="h-4 w-4" />
+                  Connect
+                </Button>
+              ) : (
+                <Button
+                  variant="destructive"
+                  size="lg"
+                  onClick={handleDisconnect}
+                  disabled={status === 'connecting'}
+                  className="hover:shadow-lg transition-all hover:scale-105 gap-2"
+                >
+                  <PhoneOff className="h-4 w-4" />
+                  End Call
+                </Button>
+              )}
             </div>
           </div>
 
           {/* Audio visualization */}
           {voiceAgentProps.showVisualizer !== false && (
-            <div className="border rounded-lg bg-gradient-to-br from-primary/5 to-primary/10">
+            <div className="border border-border/50 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 shadow-inner">
               <AudioVisualizer intensity={audioIntensity} />
             </div>
           )}
 
           {/* Transcript */}
           {voiceAgentProps.showTranscript !== false && (
-            <div>
-              <h3 className="text-sm font-semibold mb-2">Conversation</h3>
-              <TranscriptView items={transcript} />
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1 bg-border" />
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Conversation</h3>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <div className="max-h-[300px] overflow-y-auto rounded-xl border border-border/50 bg-muted/20 p-4">
+                <TranscriptView items={transcript} />
+              </div>
             </div>
           )}
 
           {/* Help text */}
-          {status === 'disconnected' && (
-            <p className="text-xs text-muted-foreground text-center">
-              Click &quot;Connect&quot; to start a voice conversation. Make sure to allow microphone access when prompted.
-            </p>
+          {status === 'disconnected' && transcript.length === 0 && (
+            <div className="text-center p-6 rounded-xl bg-gradient-to-br from-accent/20 to-accent/10 border border-accent/30">
+              <Mic className="h-10 w-10 mx-auto mb-3 text-primary opacity-70" />
+              <p className="text-sm text-foreground font-medium mb-2">
+                Ready to help with healthcare, finance, and legal questions
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Click &quot;Connect&quot; to start a voice conversation. Make sure to allow microphone access when prompted.
+              </p>
+            </div>
           )}
         </div>
       </DialogContent>

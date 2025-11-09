@@ -7,25 +7,17 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'guru',
-  description: 'Made with love by Kashish and Shraddha',
+  title: 'Guru - Your Trusted Immigration Assistant',
+  description: 'Your compassionate AI companion helping immigrants navigate healthcare, finance, and legal matters in the US. Get instant, reliable guidance 24/7.',
   generator: 'guru.app',
   icons: {
     icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
       {
         url: '/icon.svg',
         type: 'image/svg+xml',
       },
     ],
-    apple: '/apple-icon.png',
+    apple: '/icon.svg',
   },
 }
 

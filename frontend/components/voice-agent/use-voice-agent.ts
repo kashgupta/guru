@@ -87,48 +87,51 @@ export function useVoiceAgent(props: VoiceAgentProps) {
       setAudioIntensity(0.3)
 
       // Listen for conversation updates
-      session.on('input_audio_buffer.speech_started', () => {
+      // Type assertion to handle event listeners
+      const sessionAny = session as any
+
+      sessionAny.on?.('input_audio_buffer.speech_started', () => {
         console.log('User started speaking')
         setAudioIntensity(0.8)
       })
 
-      session.on('input_audio_buffer.speech_stopped', () => {
+      sessionAny.on?.('input_audio_buffer.speech_stopped', () => {
         console.log('User stopped speaking')
         setAudioIntensity(0.3)
       })
 
-      session.on('conversation.item.created', (event: any) => {
+      sessionAny.on?.('conversation.item.created', (event: any) => {
         const item = event.item
         if (item.role === 'user' && item.type === 'message') {
           console.log('User message:', item)
         }
       })
 
-      session.on('response.audio_transcript.done', (event: any) => {
+      sessionAny.on?.('response.audio_transcript.done', (event: any) => {
         // Assistant's response transcript
         if (event.transcript) {
           addTranscript('assistant', event.transcript)
         }
       })
 
-      session.on('conversation.item.input_audio_transcription.completed', (event: any) => {
+      sessionAny.on?.('conversation.item.input_audio_transcription.completed', (event: any) => {
         // User's speech transcript
         if (event.transcript) {
           addTranscript('user', event.transcript)
         }
       })
 
-      session.on('response.audio.delta', () => {
+      sessionAny.on?.('response.audio.delta', () => {
         // Assistant is speaking
         setAudioIntensity(0.9)
       })
 
-      session.on('response.audio.done', () => {
+      sessionAny.on?.('response.audio.done', () => {
         // Assistant finished speaking
         setAudioIntensity(0.3)
       })
 
-      session.on('error', (error: any) => {
+      sessionAny.on?.('error', (error: any) => {
         console.error('Session error:', error)
         addTranscript('assistant', `Error: ${error.message}`)
         props.onError?.(error)
@@ -165,26 +168,60 @@ export function useVoiceAgent(props: VoiceAgentProps) {
 
   // Disconnect from session
   const disconnect = useCallback(async () => {
-    if (sessionRef.current) {
-      await sessionRef.current.disconnect()
-      sessionRef.current = null
-    }
+    try {
+      console.log('🔴 Disconnecting session...')
 
-    if (waveIntervalRef.current) {
-      clearInterval(waveIntervalRef.current)
-      waveIntervalRef.current = null
-    }
+      if (sessionRef.current) {
+        try {
+          // Try to close the transport layer
+          const transport = (sessionRef.current as any).transport
+          if (transport && typeof transport.close === 'function') {
+            await transport.close()
+          } else if (typeof (sessionRef.current as any).close === 'function') {
+            await (sessionRef.current as any).close()
+          } else {
+            console.warn('No close method found on session or transport')
+          }
+        } catch (error) {
+          console.error('Error during session disconnect:', error)
+          // Continue with cleanup even if disconnect fails
+        }
+        sessionRef.current = null
+      }
 
-    setAudioIntensity(0)
-    setStatus('disconnected')
-    props.onDisconnected?.()
+      if (waveIntervalRef.current) {
+        clearInterval(waveIntervalRef.current)
+        waveIntervalRef.current = null
+      }
+
+      setAudioIntensity(0)
+      setStatus('disconnected')
+      props.onDisconnected?.()
+
+      console.log('🔴 Disconnected successfully')
+    } catch (error) {
+      console.error('❌ Error during disconnect:', error)
+      // Still update UI state even if there's an error
+      setAudioIntensity(0)
+      setStatus('disconnected')
+      props.onDisconnected?.()
+    }
   }, [props])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (sessionRef.current) {
-        sessionRef.current.disconnect()
+        try {
+          const transport = (sessionRef.current as any).transport
+          if (transport && typeof transport.close === 'function') {
+            transport.close()
+          } else if (typeof (sessionRef.current as any).close === 'function') {
+            (sessionRef.current as any).close()
+          }
+        } catch (error) {
+          console.error('Error cleaning up session:', error)
+        }
       }
       if (waveIntervalRef.current) {
         clearInterval(waveIntervalRef.current)

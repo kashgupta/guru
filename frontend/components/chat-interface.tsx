@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Mic, Send, VolumeX } from "lucide-react"
+import { Mic, Send, Sparkles, ArrowLeft } from "lucide-react"
 import { VoiceAgentDialog } from "@/components/voice-agent"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -23,61 +23,30 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
-  const [synthesis, setSynthesis] = useState<SpeechSynthesis | null>(null)
   const [isVoiceAgentOpen, setIsVoiceAgentOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // Initialize speech synthesis
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      setSynthesis(window.speechSynthesis)
-    }
-  }, [])
 
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // Speak the last assistant message
-  useEffect(() => {
-    if (synthesis && messages.length > 0 && !isLoading) {
-      const lastMessage = messages[messages.length - 1]
-      if (lastMessage.role === "assistant") {
-        console.log("Speaking assistant message:", lastMessage.content.substring(0, 50))
-        speakText(lastMessage.content)
-      }
-    }
-  }, [messages, isLoading, synthesis])
-
   const openVoiceAgent = () => {
     setIsVoiceAgentOpen(true)
   }
 
-  const speakText = (text: string) => {
-    if (!synthesis) return
-
-    // Cancel any ongoing speech
-    synthesis.cancel()
-
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.rate = 1.0
-    utterance.pitch = 1.0
-    utterance.volume = 1.0
-
-    utterance.onstart = () => setIsSpeaking(true)
-    utterance.onend = () => setIsSpeaking(false)
-    utterance.onerror = () => setIsSpeaking(false)
-
-    synthesis.speak(utterance)
-  }
-
-  const stopSpeaking = () => {
-    if (synthesis) {
-      synthesis.cancel()
-      setIsSpeaking(false)
+  // Format chat history for voice agent context
+  const getChatContext = () => {
+    if (messages.length === 0) {
+      return undefined
     }
+
+    const contextMessages = messages.map((msg) => {
+      const speaker = msg.role === 'user' ? 'User' : 'Assistant'
+      return `${speaker}: ${msg.content}`
+    })
+
+    return `Previous conversation history:\n\n${contextMessages.join('\n\n')}\n\nUse this context to provide more relevant and personalized responses.`
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,56 +126,88 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="flex flex-col h-screen max-w-4xl mx-auto p-4 gap-4">
+    <div className="flex flex-col h-screen max-w-5xl mx-auto p-4 gap-4">
       {/* Header */}
-      <div className="flex items-center justify-between py-4 border-b border-border">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Guru</h1>
-          <p className="text-sm text-muted-foreground">
-            Here to answer your questions and help you navigate the healthcare system
-          </p>
-        </div>
-        {isSpeaking && (
+      <div className="flex items-center justify-between py-6 px-4 border-b border-border/50 bg-card/30 backdrop-blur-sm rounded-2xl shadow-sm">
+        <div className="flex items-center gap-4">
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
-            onClick={stopSpeaking}
-            className="rounded-full bg-transparent"
+            onClick={() => window.location.reload()}
+            className="rounded-full"
           >
-            <VolumeX className="h-4 w-4" />
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-        )}
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-gradient-to-br from-primary to-primary/70 rounded-xl">
+                <Sparkles className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">Guru</h1>
+            </div>
+            <p className="text-sm text-muted-foreground ml-12">
+              Your trusted guide for healthcare, finance, and legal matters
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+      <div className="flex-1 overflow-y-auto space-y-6 pb-4 px-2">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
-            <Card className="p-8 bg-card text-center max-w-md">
-              <h2 className="text-md mb-2 text-card-foreground">Welcome to Guru</h2>
-              <p className="text-muted-foreground">
-                Start a conversation by typing a message or using the voice button
+            <Card className="p-10 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur border-border/50 text-center max-w-lg shadow-lg">
+              <div className="inline-flex p-4 bg-primary/10 rounded-2xl mb-4">
+                <Sparkles className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-xl font-semibold mb-3 text-card-foreground">How can I help you today?</h2>
+              <p className="text-muted-foreground mb-6">
+                Ask me anything about healthcare, finance, legal matters, or life in the US
               </p>
+              <div className="grid grid-cols-1 gap-2 text-sm">
+                <Button
+                  variant="outline"
+                  className="justify-start text-left h-auto py-3 px-4 hover:bg-primary/10 hover:border-primary/50"
+                  onClick={() => setInput("How do I find affordable health insurance?")}
+                >
+                  How do I find affordable health insurance?
+                </Button>
+                <Button
+                  variant="outline"
+                  className="justify-start text-left h-auto py-3 px-4 hover:bg-primary/10 hover:border-primary/50"
+                  onClick={() => setInput("How can I build credit as a new immigrant?")}
+                >
+                  How can I build credit as a new immigrant?
+                </Button>
+                <Button
+                  variant="outline"
+                  className="justify-start text-left h-auto py-3 px-4 hover:bg-primary/10 hover:border-primary/50"
+                  onClick={() => setInput("What are my rights as a tenant?")}
+                >
+                  What are my rights as a tenant?
+                </Button>
+              </div>
             </Card>
           </div>
         )}
 
-        {messages.map((message) => (
+        {messages.map((message, index) => (
           <div
             key={message.id}
-            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-4 duration-500`}
+            style={{ animationDelay: `${index * 50}ms` }}
           >
             <Card
-              className={`max-w-[80%] p-4 ${
+              className={`max-w-[85%] p-5 shadow-md ${
                 message.role === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-card-foreground"
+                  ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground border-primary/20"
+                  : "bg-card/80 backdrop-blur text-card-foreground border-border/50"
               }`}
             >
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-3">
                 {message.role === "assistant" && (
-                  <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-xs font-semibold text-accent-foreground">AI</span>
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
+                    <Sparkles className="h-4 w-4 text-primary-foreground" />
                   </div>
                 )}
                 <div className="flex-1 prose prose-sm dark:prose-invert max-w-none">
@@ -261,16 +262,16 @@ export function ChatInterface() {
         ))}
 
         {isLoading && (
-          <div className="flex justify-start">
-            <Card className="max-w-[80%] p-4 bg-card">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center">
-                  <span className="text-xs font-semibold text-accent-foreground">AI</span>
+          <div className="flex justify-start animate-in slide-in-from-bottom-4">
+            <Card className="max-w-[85%] p-5 bg-card/80 backdrop-blur shadow-md border-border/50">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-sm">
+                  <Sparkles className="h-4 w-4 text-primary-foreground" />
                 </div>
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:0.4s]" />
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce" />
+                  <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
                 </div>
               </div>
             </Card>
@@ -281,30 +282,32 @@ export function ChatInterface() {
       </div>
 
       {/* Input Area */}
-      <form onSubmit={handleSubmit} className="flex gap-2 pb-4">
+      <form onSubmit={handleSubmit} className="flex gap-3 pb-4 px-2">
         <Button
           type="button"
           variant="outline"
           size="icon"
           onClick={openVoiceAgent}
-          className="flex-shrink-0 rounded-full"
+          className="flex-shrink-0 rounded-full h-12 w-12 hover:bg-primary/10 hover:border-primary/50 transition-all hover:scale-105 shadow-sm"
           disabled={isLoading}
         >
           <Mic className="h-5 w-5" />
         </Button>
 
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
-          disabled={isLoading}
-          className="flex-1"
-        />
+        <div className="flex-1 relative">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask me anything..."
+            disabled={isLoading}
+            className="h-12 pr-12 rounded-full bg-card/50 backdrop-blur border-border/50 focus:border-primary/50 shadow-sm"
+          />
+        </div>
 
         <Button
           type="submit"
           disabled={!input.trim() || isLoading}
-          className="flex-shrink-0 rounded-full"
+          className="flex-shrink-0 rounded-full h-12 w-12 bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg transition-all hover:scale-105 shadow-sm"
           size="icon"
         >
           <Send className="h-5 w-5" />
@@ -323,6 +326,7 @@ export function ChatInterface() {
 - Preventive care and vaccinations
 - Medical bill negotiation and financial assistance
 Always provide clear, actionable advice in simple language.`}
+        context={getChatContext()}
       />
     </div>
   )
