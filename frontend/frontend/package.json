@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "highlight.js": "^11.11.1"
+  }
+}

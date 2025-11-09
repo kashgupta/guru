@@ -12,7 +12,7 @@ export async function GET() {
     if (!apiKey) {
       console.error('❌ OPENAI_API_KEY not configured')
       return NextResponse.json(
-        { error: 'OPENAI_API_KEY not configured. Please set it in your .env.local file.' },
+        { error: 'OPENAI_API_KEY not configured.' },
         { status: 500 }
       )
     }

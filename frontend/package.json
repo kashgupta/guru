@@ -11,6 +11,8 @@
   "dependencies": {
     "@ai-sdk/react": "latest",
     "@hookform/resolvers": "^3.10.0",
+    "@openai/agents": "^0.3.0",
+    "@openai/agents-realtime": "^0.3.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",

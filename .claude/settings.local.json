@@ -3,7 +3,10 @@
     "allow": [
       "WebSearch",
       "WebFetch(domain:platform.openai.com)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(npm start)",
+      "Bash(npm run dev:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []

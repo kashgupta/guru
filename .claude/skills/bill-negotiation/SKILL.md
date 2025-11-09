@@ -7,6 +7,8 @@ description: Helps immigrants negotiate and reduce medical bills, understand bil
 
 This skill enables the healthcare agent to help immigrants navigate medical billing, negotiate bills, and access financial assistance programs in the US healthcare system.
 
+**IMPORTANT**: When using this skill, always begin your response by explicitly stating: "I'm now using my Medical Bill Negotiation skill to help you with this issue."
+
 ## Core Capabilities
 
 When assisting with medical bills, the agent can:
