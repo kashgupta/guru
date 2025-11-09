@@ -34,7 +34,8 @@ export async function POST(req: Request) {
     console.log("User prompt:", userPrompt)
 
     // Call backend API
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:3001"
+    //const backendUrl = process.env.BACKEND_URL || "http://localhost:3001"
+    const backendUrl = "https://guru-2.onrender.com"
     console.log("Calling backend:", backendUrl)
 
     const backendRes = await fetch(`${backendUrl}/api/chat`, {
