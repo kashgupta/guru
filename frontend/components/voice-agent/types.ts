@@ -1,9 +1,14 @@
+export interface ConversationMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 export interface VoiceAgentProps {
   // Required props
   prompt: string              // System instructions for agent personality
 
   // Optional props
-  context?: string            // Additional context appended to instructions
+  conversationHistory?: ConversationMessage[]  // Previous conversation messages to inject
   initialMessage?: string     // First message agent says after connecting
 
   // Configuration

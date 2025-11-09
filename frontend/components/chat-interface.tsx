@@ -59,32 +59,14 @@ export function ChatInterface() {
   }, [messages])
 
   const openVoiceAgent = () => {
-    const context = getChatContext()
     console.log('🎤 Opening Voice Agent')
     console.log('- Messages count:', messages.length)
-    console.log('- Has context:', !!context)
-    console.log('- Context preview:', context?.substring(0, 200) || 'No context')
-    setIsVoiceAgentOpen(true)
-  }
-
-  // Format chat history for voice agent context
-  const getChatContext = () => {
-    if (messages.length === 0) {
-      return undefined
+    console.log('- Has conversation history:', messages.length > 0)
+    if (messages.length > 0) {
+      console.log('- First message:', messages[0].content.substring(0, 50) + '...')
+      console.log('- Last message:', messages[messages.length - 1].content.substring(0, 50) + '...')
     }
-
-    const contextMessages = messages.map((msg) => {
-      const speaker = msg.role === 'user' ? 'User' : 'You (Assistant)'
-      return `${speaker}: ${msg.content}`
-    })
-
-    return `CONVERSATION HISTORY - READ THIS CAREFULLY:
-
-You just had a text conversation with this user. Here's everything you discussed:
-
-${contextMessages.join('\n\n')}
-
-CRITICAL: The user expects you to remember everything from this conversation. Reference specific details they shared when you greet them.`
+    setIsVoiceAgentOpen(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -365,31 +347,23 @@ CRITICAL: The user expects you to remember everything from this conversation. Re
       </div>
 
       {/* Voice Agent Dialog */}
-      {isVoiceAgentOpen && (() => {
-        const context = getChatContext()
-        console.log('🎬 Rendering VoiceAgentDialog with:', {
-          hasContext: !!context,
-          contextLength: context?.length || 0,
-          messagesCount: messages.length,
-          agent: currentAgent
-        })
-
-        return (
-          <VoiceAgentDialog
-            key={`voice-agent-${messages.length}`}
-            open={isVoiceAgentOpen}
-            onOpenChange={setIsVoiceAgentOpen}
-            prompt={`${AGENT_PROMPTS[currentAgent]}
+      {isVoiceAgentOpen && (
+        <VoiceAgentDialog
+          key={`voice-agent-${messages.length}`}
+          open={isVoiceAgentOpen}
+          onOpenChange={setIsVoiceAgentOpen}
+          prompt={`${AGENT_PROMPTS[currentAgent]}
 
 GREETING INSTRUCTIONS:
 When you first connect, you MUST:
 1. Acknowledge the user is switching from text to voice chat
-2. Reference what you already discussed or advised
-3. Ask how you can continue helping"`}
-            context={context}
-          />
-        )
-      })()}
+2. Reference specific details from what you already discussed
+3. Ask how you can continue helping them
+
+Remember: You have access to the full conversation history, so reference specific topics, concerns, or advice you previously provided.`}
+          conversationHistory={messages.length > 0 ? messages : undefined}
+        />
+      )}
     </div>
   )
 }
