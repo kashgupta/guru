@@ -53,6 +53,18 @@ export function ChatInterface() {
   const [currentAgent, setCurrentAgent] = useState<keyof typeof AGENT_PROMPTS>('healthcare')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Show initial greeting on first load
+  useEffect(() => {
+    if (messages.length === 0) {
+      const initialGreeting: Message = {
+        id: 'initial-greeting',
+        role: 'assistant',
+        content: 'Hi! I can help you with anything medical, legal, or financial. What language do you prefer to talk in?'
+      }
+      setMessages([initialGreeting])
+    }
+  }, [])
+
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
