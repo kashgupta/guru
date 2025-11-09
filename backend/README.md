@@ -1,6 +1,6 @@
 # Guru Backend
 
-Backend agent service using Claude Agents SDK for providing healthcare, financial, and legal guidance to immigrants.
+Backend agent service using OpenAI Agents SDK for providing healthcare, financial, and legal guidance to immigrants.
 
 ## Features
 
@@ -22,7 +22,6 @@ Backend agent service using Claude Agents SDK for providing healthcare, financia
 
    Create a `.env` file in the project root:
    ```env
-   ANTHROPIC_API_KEY=your_anthropic_key_here
    OPENAI_API_KEY=your_openai_key_here
 
    # For WhatsApp integration
@@ -69,7 +68,7 @@ For detailed setup instructions, see [WHATSAPP_SETUP.md](./WHATSAPP_SETUP.md).
 
 ## Documentation
 
-- [Claude Agents SDK documentation](https://docs.claude.com/en/api/agent-sdk/overview)
+- [OpenAI Agents SDK documentation](https://openai.github.io/openai-agents-js/)
 - [Twilio WhatsApp API documentation](https://www.twilio.com/docs/whatsapp)
 - [OpenAI API documentation](https://platform.openai.com/docs)
 

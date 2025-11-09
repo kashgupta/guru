@@ -257,7 +257,7 @@ Consider adding these features:
 
 ### OpenAI Costs
 - Whisper transcription: $0.006 per minute
-- GPT-4 (via Claude Agent): Check OpenAI pricing
+- GPT-4o: $2.50 per million input tokens, $10 per million output tokens
 - TTS: $15 per million characters
 
 ## Support

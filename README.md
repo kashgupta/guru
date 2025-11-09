@@ -24,14 +24,14 @@ npm install
 npm run dev
 ```
 
-### Backend (Claude Agents SDK)
-A Node.js backend service using Claude Agents SDK with custom agents for healthcare, financial, and legal domains.
+### Backend (OpenAI Agents SDK)
+A Node.js backend service using OpenAI Agents SDK with custom agents for healthcare, financial, and legal domains.
 
 **Setup:**
 ```bash
 cd backend
 npm install
-export ANTHROPIC_API_KEY=your_api_key_here
+# Set OPENAI_API_KEY in backend/.env file
 npm start
 ```
 
@@ -40,8 +40,7 @@ See the [backend README](./backend/README.md) for more details.
 ## Prerequisites
 
 - Node.js 18+ installed
-- OpenAI API key with access to Realtime API (for voice features)
-- Anthropic API key (for Claude agents)
+- OpenAI API key with access to Realtime API (for voice features and agents)
 - Modern browser with WebRTC support (Chrome, Firefox, Safari, Edge)
 - Microphone access (for voice features)
 
@@ -74,9 +73,9 @@ OPENAI_API_KEY=sk-proj-your-actual-api-key-here
 API_PORT=3001
 ```
 
-For backend, set:
-```bash
-export ANTHROPIC_API_KEY=your_api_key_here
+For backend, create a `.env` file in the backend directory with:
+```env
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 ### 3. Start the Application
@@ -104,7 +103,7 @@ npm start
 
 This application uses:
 - **Next.js** for the frontend with a modern chat interface
-- **Claude Agents SDK** for domain-specific agent responses
+- **OpenAI Agents SDK** for domain-specific agent responses
 - **OpenAI Realtime API** for voice interactions (optional)
 - **WebRTC** for low-latency browser communication
 
@@ -130,8 +129,6 @@ voice: 'verse',  // Options: alloy, echo, fable, onyx, nova, shimmer, verse
 ### "OPENAI_API_KEY not configured"
 Make sure you've created a `.env` file with your API key.
 
-### "ANTHROPIC_API_KEY not configured"
-Make sure you've exported the environment variable for the backend.
 
 ### No microphone access
 Check browser permissions and ensure you're using HTTPS or localhost.
@@ -145,7 +142,7 @@ Check browser permissions and ensure you're using HTTPS or localhost.
 
 - [OpenAI Voice Agents Guide](https://platform.openai.com/docs/guides/voice-agents)
 - [Realtime API Reference](https://platform.openai.com/docs/api-reference/realtime)
-- [Claude Agents SDK Documentation](https://docs.claude.com/en/api/agent-sdk/overview)
+- [OpenAI Agents SDK Documentation](https://openai.github.io/openai-agents-js/)
 
 ## License
 
