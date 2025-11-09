@@ -5,7 +5,8 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Mic, MicOff, Send, VolumeX } from "lucide-react"
+import { Mic, Send, VolumeX } from "lucide-react"
+import { VoiceAgentDialog } from "@/components/voice-agent"
 
 interface Message {
   id: string
@@ -17,48 +18,15 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
-  const [recognition, setRecognition] = useState<any>(null)
   const [synthesis, setSynthesis] = useState<SpeechSynthesis | null>(null)
+  const [isVoiceAgentOpen, setIsVoiceAgentOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Initialize speech recognition and synthesis
+  // Initialize speech synthesis
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      // Speech Recognition
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-
-      if (SpeechRecognition) {
-        const recognitionInstance = new SpeechRecognition()
-        recognitionInstance.continuous = false
-        recognitionInstance.interimResults = false
-        recognitionInstance.lang = "en-US"
-
-        recognitionInstance.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript
-          console.log("Speech recognition result:", transcript)
-          setInput(transcript)
-          setIsListening(false)
-        }
-
-        recognitionInstance.onerror = (event: any) => {
-          console.error("Speech recognition error:", event.error)
-          setIsListening(false)
-        }
-
-        recognitionInstance.onend = () => {
-          setIsListening(false)
-        }
-
-        setRecognition(recognitionInstance)
-      }
-
-      // Speech Synthesis
-      if (window.speechSynthesis) {
-        setSynthesis(window.speechSynthesis)
-      }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      setSynthesis(window.speechSynthesis)
     }
   }, [])
 
@@ -78,19 +46,8 @@ export function ChatInterface() {
     }
   }, [messages, isLoading, synthesis])
 
-  const toggleListening = () => {
-    if (!recognition) {
-      alert("Speech recognition is not supported in your browser.")
-      return
-    }
-
-    if (isListening) {
-      recognition.stop()
-      setIsListening(false)
-    } else {
-      recognition.start()
-      setIsListening(true)
-    }
+  const openVoiceAgent = () => {
+    setIsVoiceAgentOpen(true)
   }
 
   const speakText = (text: string) => {
@@ -281,20 +238,20 @@ export function ChatInterface() {
       <form onSubmit={handleSubmit} className="flex gap-2 pb-4">
         <Button
           type="button"
-          variant={isListening ? "destructive" : "outline"}
+          variant="outline"
           size="icon"
-          onClick={toggleListening}
+          onClick={openVoiceAgent}
           className="flex-shrink-0 rounded-full"
           disabled={isLoading}
         >
-          {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          <Mic className="h-5 w-5" />
         </Button>
 
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={isListening ? "Listening..." : "Type your message..."}
-          disabled={isLoading || isListening}
+          placeholder="Type your message..."
+          disabled={isLoading}
           className="flex-1"
         />
 
@@ -307,6 +264,20 @@ export function ChatInterface() {
           <Send className="h-5 w-5" />
         </Button>
       </form>
+
+      {/* Voice Agent Dialog */}
+      <VoiceAgentDialog
+        open={isVoiceAgentOpen}
+        onOpenChange={setIsVoiceAgentOpen}
+        prompt={`You are a compassionate healthcare advisor helping immigrants understand:
+- How to find affordable healthcare options
+- Understanding health insurance in the US
+- Finding community health centers
+- Emergency healthcare procedures
+- Preventive care and vaccinations
+- Medical bill negotiation and financial assistance
+Always provide clear, actionable advice in simple language.`}
+      />
     </div>
   )
 }
