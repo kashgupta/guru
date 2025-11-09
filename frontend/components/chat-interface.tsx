@@ -7,6 +7,11 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Mic, Send, VolumeX } from "lucide-react"
 import { VoiceAgentDialog } from "@/components/voice-agent"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import rehypeHighlight from "rehype-highlight"
+import rehypeRaw from "rehype-raw"
+import "highlight.js/styles/github-dark.css"
 
 interface Message {
   id: string
@@ -204,10 +209,51 @@ export function ChatInterface() {
                     <span className="text-xs font-semibold text-accent-foreground">AI</span>
                   </div>
                 )}
-                <div className="flex-1">
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                <div className="flex-1 prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                    components={{
+                      // Customize code blocks
+                      code: ({ className, children, ...props }: any) => {
+                        const isInline = !className
+                        return isInline ? (
+                          <code className="bg-muted px-1 py-0.5 rounded text-xs" {...props}>
+                            {children}
+                          </code>
+                        ) : (
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        )
+                      },
+                      // Customize links
+                      a: ({ children, ...props }: any) => (
+                        <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                          {children}
+                        </a>
+                      ),
+                      // Customize paragraphs
+                      p: ({ children, ...props }: any) => (
+                        <p className="mb-2 last:mb-0" {...props}>
+                          {children}
+                        </p>
+                      ),
+                      // Customize lists
+                      ul: ({ children, ...props }: any) => (
+                        <ul className="list-disc list-inside mb-2" {...props}>
+                          {children}
+                        </ul>
+                      ),
+                      ol: ({ children, ...props }: any) => (
+                        <ol className="list-decimal list-inside mb-2" {...props}>
+                          {children}
+                        </ol>
+                      ),
+                    }}
+                  >
                     {message.content}
-                  </p>
+                  </ReactMarkdown>
                 </div>
               </div>
             </Card>
