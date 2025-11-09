@@ -19,11 +19,38 @@ interface Message {
   content: string
 }
 
+// Agent system prompts matching backend
+const AGENT_PROMPTS = {
+  healthcare: `You are a compassionate healthcare advisor helping immigrants understand:
+- How to find affordable healthcare options
+- Understanding health insurance in the US
+- Finding community health centers
+- Emergency healthcare procedures
+- Preventive care and vaccinations
+- Medical bill negotiation and financial assistance
+Always provide clear, actionable advice in simple language.`,
+  financial: `You are a financial advisor specializing in helping immigrants:
+- Open bank accounts
+- Build credit history
+- Understand taxes
+- Save money and budget
+- Access financial resources
+Provide practical, step-by-step guidance.`,
+  legal: `You are a legal advisor helping immigrants with:
+- Immigration paperwork and processes
+- Understanding legal rights
+- Finding legal resources
+- Document requirements
+- Important deadlines
+Always clarify that you provide general information, not legal advice, and recommend consulting an attorney for specific cases.`,
+} as const
+
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isVoiceAgentOpen, setIsVoiceAgentOpen] = useState(false)
+  const [currentAgent, setCurrentAgent] = useState<keyof typeof AGENT_PROMPTS>('healthcare')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom
@@ -32,6 +59,11 @@ export function ChatInterface() {
   }, [messages])
 
   const openVoiceAgent = () => {
+    const context = getChatContext()
+    console.log('🎤 Opening Voice Agent')
+    console.log('- Messages count:', messages.length)
+    console.log('- Has context:', !!context)
+    console.log('- Context preview:', context?.substring(0, 200) || 'No context')
     setIsVoiceAgentOpen(true)
   }
 
@@ -42,11 +74,17 @@ export function ChatInterface() {
     }
 
     const contextMessages = messages.map((msg) => {
-      const speaker = msg.role === 'user' ? 'User' : 'Assistant'
+      const speaker = msg.role === 'user' ? 'User' : 'You (Assistant)'
       return `${speaker}: ${msg.content}`
     })
 
-    return `Previous conversation history:\n\n${contextMessages.join('\n\n')}\n\nUse this context to provide more relevant and personalized responses.`
+    return `CONVERSATION HISTORY - READ THIS CAREFULLY:
+
+You just had a text conversation with this user. Here's everything you discussed:
+
+${contextMessages.join('\n\n')}
+
+CRITICAL: The user expects you to remember everything from this conversation. Reference specific details they shared when you greet them.`
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,6 +140,12 @@ export function ChatInterface() {
       console.log("- Success:", data.success)
       console.log("- Message length:", data.message?.length || 0)
       console.log("- Agent:", data.agent)
+
+      // Update current agent if backend selected a different one
+      if (data.agent && AGENT_PROMPTS[data.agent as keyof typeof AGENT_PROMPTS]) {
+        setCurrentAgent(data.agent as keyof typeof AGENT_PROMPTS)
+        console.log("- Updated current agent to:", data.agent)
+      }
 
       // Add assistant message to UI
       const assistantMsg: Message = {
@@ -321,19 +365,31 @@ export function ChatInterface() {
       </div>
 
       {/* Voice Agent Dialog */}
-      <VoiceAgentDialog
-        open={isVoiceAgentOpen}
-        onOpenChange={setIsVoiceAgentOpen}
-        prompt={`You are a compassionate healthcare advisor helping immigrants understand:
-- How to find affordable healthcare options
-- Understanding health insurance in the US
-- Finding community health centers
-- Emergency healthcare procedures
-- Preventive care and vaccinations
-- Medical bill negotiation and financial assistance
-Always provide clear, actionable advice in simple language.`}
-        context={getChatContext()}
-      />
+      {isVoiceAgentOpen && (() => {
+        const context = getChatContext()
+        console.log('🎬 Rendering VoiceAgentDialog with:', {
+          hasContext: !!context,
+          contextLength: context?.length || 0,
+          messagesCount: messages.length,
+          agent: currentAgent
+        })
+
+        return (
+          <VoiceAgentDialog
+            key={`voice-agent-${messages.length}`}
+            open={isVoiceAgentOpen}
+            onOpenChange={setIsVoiceAgentOpen}
+            prompt={`${AGENT_PROMPTS[currentAgent]}
+
+GREETING INSTRUCTIONS:
+When you first connect, you MUST:
+1. Acknowledge the user is switching from text to voice chat
+2. Reference what you already discussed or advised
+3. Ask how you can continue helping"`}
+            context={context}
+          />
+        )
+      })()}
     </div>
   )
 }

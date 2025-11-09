@@ -12,10 +12,24 @@ export function useVoiceAgent(props: VoiceAgentProps) {
   const sessionRef = useRef<RealtimeSession | null>(null)
   const waveIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Merge prompt with context
-  const instructions = props.context
-    ? `${props.prompt}\n\nAdditional Context:\n${props.context}`
-    : props.prompt
+  // Merge prompt with context - compute dynamically to get latest context
+  const getInstructions = useCallback(() => {
+    let instructions = props.prompt
+
+    // If context exists, add it AFTER the role description
+    if (props.context) {
+      instructions = `${props.prompt}\n\n---\n\n${props.context}`
+    }
+
+    console.log('📋 Voice Agent Instructions:')
+    console.log('- Has context:', !!props.context)
+    console.log('- Context length:', props.context?.length || 0)
+    console.log('\n==================== FULL INSTRUCTIONS ====================')
+    console.log(instructions)
+    console.log('===========================================================\n')
+
+    return instructions
+  }, [props.prompt, props.context])
 
   // Add transcript item
   const addTranscript = useCallback((speaker: 'user' | 'assistant', message: string) => {
@@ -58,10 +72,10 @@ export function useVoiceAgent(props: VoiceAgentProps) {
 
       console.log('🟢 Step 3: Creating RealtimeAgent...')
 
-      // Create RealtimeAgent
+      // Create RealtimeAgent with latest instructions
       const agent = new RealtimeAgent({
         name: 'Assistant',
-        instructions,
+        instructions: getInstructions(),
       })
 
       console.log('🟢 Step 4: Creating RealtimeSession...')
@@ -79,6 +93,40 @@ export function useVoiceAgent(props: VoiceAgentProps) {
         apiKey,
         url: 'https://api.openai.com/v1/realtime'
       })
+
+      // Inject context as a conversation item if it exists
+      if (props.context) {
+        console.log('🟢 Step 5.5: Injecting context as conversation item...')
+        try {
+          const sessionAny = session as any
+
+          // Send context as a system message via the transport
+          if (sessionAny.transport?.send) {
+            console.log('Sending context via conversation.item.create event...')
+            await sessionAny.transport.send({
+              type: 'conversation.item.create',
+              item: {
+                type: 'message',
+                role: 'system',
+                content: [
+                  {
+                    type: 'input_text',
+                    text: props.context
+                  }
+                ]
+              }
+            })
+            console.log('✅ Successfully injected context as conversation item')
+          } else {
+            console.warn('⚠️ Transport not available to inject context')
+          }
+        } catch (contextError) {
+          console.error('⚠️ Error injecting context:', contextError)
+          console.warn('Continuing without context injection...')
+        }
+      } else {
+        console.log('🟢 Step 5.5: No context to inject')
+      }
 
       setStatus('connected')
       props.onConnected?.()
@@ -179,7 +227,7 @@ export function useVoiceAgent(props: VoiceAgentProps) {
 
       props.onError?.(new Error(errorMsg))
     }
-  }, [instructions, props, addTranscript])
+  }, [getInstructions, props, addTranscript])
 
   // Disconnect from session
   const disconnect = useCallback(async () => {

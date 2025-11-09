@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { runAgent, routeToAgent } from './agent.js';
+import { handleWhatsAppWebhook, handleStatusCallback } from './whatsapp.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -8,6 +9,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // For Twilio webhooks
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -56,10 +58,17 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// WhatsApp webhook endpoint
+app.post('/api/whatsapp/webhook', handleWhatsAppWebhook);
+
+// WhatsApp status callback endpoint (optional)
+app.post('/api/whatsapp/status', handleStatusCallback);
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Guru Backend API server running on http://localhost:${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/health`);
   console.log(`💬 Chat endpoint: http://localhost:${PORT}/api/chat`);
+  console.log(`📱 WhatsApp webhook: http://localhost:${PORT}/api/whatsapp/webhook`);
 });
 

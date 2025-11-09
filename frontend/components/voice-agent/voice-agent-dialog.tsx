@@ -2,7 +2,6 @@
 
 import { useVoiceAgent } from './use-voice-agent'
 import { AudioVisualizer } from './audio-visualizer'
-import { TranscriptView } from './transcript-view'
 import type { VoiceAgentProps } from './types'
 import {
   Dialog,
@@ -12,7 +11,7 @@ import {
   DialogTitle,
 } from '../ui/dialog'
 import { Button } from '../ui/button'
-import { Mic, MicOff, Power, Phone, PhoneOff, Sparkles } from 'lucide-react'
+import { Mic, Phone, PhoneOff, Sparkles } from 'lucide-react'
 
 interface VoiceAgentDialogProps extends VoiceAgentProps {
   open: boolean
@@ -26,7 +25,6 @@ export function VoiceAgentDialog({
 }: VoiceAgentDialogProps) {
   const {
     status,
-    transcript,
     audioIntensity,
     connect,
     disconnect,
@@ -134,22 +132,8 @@ export function VoiceAgentDialog({
             </div>
           )}
 
-          {/* Transcript */}
-          {voiceAgentProps.showTranscript !== false && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="h-px flex-1 bg-border" />
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Conversation</h3>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-              <div className="max-h-[300px] overflow-y-auto rounded-xl border border-border/50 bg-muted/20 p-4">
-                <TranscriptView items={transcript} />
-              </div>
-            </div>
-          )}
-
           {/* Help text */}
-          {status === 'disconnected' && transcript.length === 0 && (
+          {status === 'disconnected' && (
             <div className="text-center p-6 rounded-xl bg-gradient-to-br from-accent/20 to-accent/10 border border-accent/30">
               <Mic className="h-10 w-10 mx-auto mb-3 text-primary opacity-70" />
               <p className="text-sm text-foreground font-medium mb-2">
