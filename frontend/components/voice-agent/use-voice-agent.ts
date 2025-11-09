@@ -109,15 +109,17 @@ export function useVoiceAgent(props: VoiceAgentProps) {
 
       sessionAny.on?.('response.audio_transcript.done', (event: any) => {
         // Assistant's response transcript
-        if (event.transcript) {
-          addTranscript('assistant', event.transcript)
+        const transcript = event?.transcript || event?.response?.transcript
+        if (transcript && transcript.trim()) {
+          addTranscript('assistant', transcript)
         }
       })
 
       sessionAny.on?.('conversation.item.input_audio_transcription.completed', (event: any) => {
         // User's speech transcript
-        if (event.transcript) {
-          addTranscript('user', event.transcript)
+        const transcript = event?.transcript || event?.item?.transcript
+        if (transcript && transcript.trim()) {
+          addTranscript('user', transcript)
         }
       })
 
@@ -132,9 +134,22 @@ export function useVoiceAgent(props: VoiceAgentProps) {
       })
 
       sessionAny.on?.('error', (error: any) => {
-        console.error('Session error:', error)
-        addTranscript('assistant', `Error: ${error.message}`)
-        props.onError?.(error)
+        // Ignore empty error objects or errors without meaningful messages (common SDK bug)
+        if (!error || (typeof error === 'object' && Object.keys(error).length === 0)) {
+          console.warn('⚠️ Received empty error event from SDK - ignoring (this is a known SDK bug)')
+          return
+        }
+
+        console.error('❌ Session error:', error)
+        const errorMessage = error?.message || error?.error?.message || ''
+
+        // Only show error in transcript if there's a meaningful message
+        if (errorMessage && errorMessage.trim()) {
+          addTranscript('assistant', `Error: ${errorMessage}`)
+          props.onError?.(error)
+        } else {
+          console.warn('⚠️ Received error without message - ignoring')
+        }
       })
 
       console.log('🟢 Step 6: Connection successful!')

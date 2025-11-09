@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Mic, Send, Sparkles, ArrowLeft } from "lucide-react"
+import { Send, Sparkles, ArrowLeft, Phone } from "lucide-react"
 import { VoiceAgentDialog } from "@/components/voice-agent"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -282,37 +282,43 @@ export function ChatInterface() {
       </div>
 
       {/* Input Area */}
-      <form onSubmit={handleSubmit} className="flex gap-3 pb-4 px-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={openVoiceAgent}
-          className="flex-shrink-0 rounded-full h-12 w-12 hover:bg-primary/10 hover:border-primary/50 transition-all hover:scale-105 shadow-sm"
-          disabled={isLoading}
-        >
-          <Mic className="h-5 w-5" />
-        </Button>
-
-        <div className="flex-1 relative">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask me anything..."
+      <div className="relative pb-4 px-2">
+        {/* Call button hovering above search bar */}
+        <div className="absolute left-6 -top-36 z-10">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={openVoiceAgent}
+            className="flex-shrink-0 rounded-full h-28 w-28 hover:bg-primary/10 hover:border-primary/50 transition-all hover:scale-105 shadow-lg bg-card/95 backdrop-blur"
             disabled={isLoading}
-            className="h-12 pr-12 rounded-full bg-card/50 backdrop-blur border-border/50 focus:border-primary/50 shadow-sm"
-          />
+          >
+            <Phone className="h-14 w-14" />
+          </Button>
         </div>
 
-        <Button
-          type="submit"
-          disabled={!input.trim() || isLoading}
-          className="flex-shrink-0 rounded-full h-12 w-12 bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg transition-all hover:scale-105 shadow-sm"
-          size="icon"
-        >
-          <Send className="h-5 w-5" />
-        </Button>
-      </form>
+        {/* Search bar */}
+        <form onSubmit={handleSubmit} className="flex gap-3">
+          <div className="flex-1 relative">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask me anything..."
+              disabled={isLoading}
+              className="h-12 pr-12 rounded-full bg-card/50 backdrop-blur border-border/50 focus:border-primary/50 shadow-sm"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={!input.trim() || isLoading}
+            className="flex-shrink-0 rounded-full h-12 w-12 bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg transition-all hover:scale-105 shadow-sm"
+            size="icon"
+          >
+            <Send className="h-5 w-5" />
+          </Button>
+        </form>
+      </div>
 
       {/* Voice Agent Dialog */}
       <VoiceAgentDialog
