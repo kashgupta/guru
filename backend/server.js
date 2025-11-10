@@ -2,11 +2,21 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
+import { createServer } from 'http';
 import { runAgent, routeToAgent } from './agent.js';
 import { handleWhatsAppWebhook, handleStatusCallback } from './whatsapp.js';
+import {
+  handleWhatsAppVoiceCall,
+  handleVoiceCallStatus,
+  setupMediaStreamWebSocket,
+} from './whatsapp-voice.js';
+import { REALTIME_CONFIG } from './voice-config.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Create HTTP server for WebSocket support
+const server = createServer(app);
 
 // Configure multer for file uploads (store in memory)
 const storage = multer.memoryStorage();
@@ -126,7 +136,7 @@ app.get('/api/voice-agent/session', async (req, res) => {
 
     console.log('🔑 API key found, creating ephemeral session...');
 
-    // Create ephemeral token for WebRTC
+    // Create ephemeral token for WebRTC - using shared config
     const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
       method: 'POST',
       headers: {
@@ -134,19 +144,10 @@ app.get('/api/voice-agent/session', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-realtime-preview-2024-12-17',
-        voice: 'verse',
-        // Enable input audio transcription
-        input_audio_transcription: {
-          model: 'whisper-1'
-        },
-        // Configure turn detection
-        turn_detection: {
-          type: 'server_vad',
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 500
-        }
+        model: REALTIME_CONFIG.model,
+        voice: REALTIME_CONFIG.voice,
+        input_audio_transcription: REALTIME_CONFIG.input_audio_transcription,
+        turn_detection: REALTIME_CONFIG.turn_detection,
       }),
     });
 
@@ -201,12 +202,21 @@ app.post('/api/whatsapp/webhook', handleWhatsAppWebhook);
 // WhatsApp status callback endpoint (optional)
 app.post('/api/whatsapp/status', handleStatusCallback);
 
+// WhatsApp voice call endpoints
+app.post('/api/whatsapp/voice/webhook', handleWhatsAppVoiceCall);
+app.post('/api/whatsapp/voice/status', handleVoiceCallStatus);
+
+// Setup WebSocket server for WhatsApp voice calls (Media Streams)
+setupMediaStreamWebSocket(server);
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Guru Backend API server running on http://localhost:${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/health`);
   console.log(`💬 Chat endpoint: http://localhost:${PORT}/api/chat`);
   console.log(`🎤 Voice agent session: http://localhost:${PORT}/api/voice-agent/session`);
   console.log(`📱 WhatsApp webhook: http://localhost:${PORT}/api/whatsapp/webhook`);
+  console.log(`📞 WhatsApp voice webhook: http://localhost:${PORT}/api/whatsapp/voice/webhook`);
+  console.log(`🔌 WhatsApp voice stream: wss://localhost:${PORT}/api/whatsapp/voice/stream`);
 });
 

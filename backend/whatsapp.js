@@ -333,4 +333,6 @@ export {
   sendWhatsAppMessage,
   transcribeAudio,
   textToSpeech,
+  getSession,
+  sessions,
 };

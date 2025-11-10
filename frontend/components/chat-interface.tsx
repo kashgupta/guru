@@ -253,26 +253,26 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="flex flex-col h-screen max-w-5xl mx-auto p-4 gap-4">
+    <div className="flex flex-col h-screen max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between py-6 px-4 border-b border-border/50 bg-card/30 backdrop-blur-sm rounded-2xl shadow-sm">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between py-3 sm:py-6 px-3 sm:px-4 border-b border-border/50 bg-card/30 backdrop-blur-sm">
+        <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => window.location.reload()}
-            className="rounded-full"
+            className="rounded-full flex-shrink-0"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-gradient-to-br from-primary to-primary/70 rounded-xl">
-                <Sparkles className="h-5 w-5 text-primary-foreground" />
+              <div className="p-1.5 sm:p-2 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex-shrink-0">
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
               </div>
-              <h1 className="text-2xl font-bold text-foreground">Guru</h1>
+              <h1 className="text-lg sm:text-2xl font-bold text-foreground">Guru</h1>
             </div>
-            <p className="text-sm text-muted-foreground ml-12">
+            <p className="hidden sm:block text-sm text-muted-foreground sm:ml-12">
               Your trusted guide for healthcare, finance, and legal matters
             </p>
           </div>
@@ -280,35 +280,35 @@ export function ChatInterface() {
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto space-y-6 pb-4 px-2">
+      <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6 px-3 sm:px-4 pt-4 pb-2">
         {messages.length === 0 && (
-          <div className="flex items-center justify-center h-full">
-            <Card className="p-10 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur border-border/50 text-center max-w-lg shadow-lg">
-              <div className="inline-flex p-4 bg-primary/10 rounded-2xl mb-4">
-                <Sparkles className="h-8 w-8 text-primary" />
+          <div className="flex items-center justify-center h-full px-2">
+            <Card className="p-6 sm:p-10 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur border-border/50 text-center max-w-lg shadow-lg w-full">
+              <div className="inline-flex p-3 sm:p-4 bg-primary/10 rounded-2xl mb-3 sm:mb-4">
+                <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
               </div>
-              <h2 className="text-xl font-semibold mb-3 text-card-foreground">How can I help you today?</h2>
-              <p className="text-muted-foreground mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-card-foreground">How can I help you today?</h2>
+              <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">
                 Ask me anything about healthcare, finance, legal matters, or life in the US
               </p>
-              <div className="grid grid-cols-1 gap-2 text-sm">
+              <div className="grid grid-cols-1 gap-2 text-xs sm:text-sm">
                 <Button
                   variant="outline"
-                  className="justify-start text-left h-auto py-3 px-4 hover:bg-primary/10 hover:border-primary/50"
+                  className="justify-start text-left h-auto py-2.5 sm:py-3 px-3 sm:px-4 hover:bg-primary/10 hover:border-primary/50"
                   onClick={() => setInput("How do I find affordable health insurance?")}
                 >
                   How do I find affordable health insurance?
                 </Button>
                 <Button
                   variant="outline"
-                  className="justify-start text-left h-auto py-3 px-4 hover:bg-primary/10 hover:border-primary/50"
+                  className="justify-start text-left h-auto py-2.5 sm:py-3 px-3 sm:px-4 hover:bg-primary/10 hover:border-primary/50"
                   onClick={() => setInput("How can I build credit as a new immigrant?")}
                 >
                   How can I build credit as a new immigrant?
                 </Button>
                 <Button
                   variant="outline"
-                  className="justify-start text-left h-auto py-3 px-4 hover:bg-primary/10 hover:border-primary/50"
+                  className="justify-start text-left h-auto py-2.5 sm:py-3 px-3 sm:px-4 hover:bg-primary/10 hover:border-primary/50"
                   onClick={() => setInput("What are my rights as a tenant?")}
                 >
                   What are my rights as a tenant?
@@ -325,19 +325,19 @@ export function ChatInterface() {
             style={{ animationDelay: `${index * 50}ms` }}
           >
             <Card
-              className={`max-w-[85%] p-5 shadow-md ${
+              className={`max-w-[90%] sm:max-w-[85%] p-3 sm:p-5 shadow-md ${
                 message.role === "user"
                   ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground border-primary/20"
                   : "bg-card/80 backdrop-blur text-card-foreground border-border/50"
               }`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-2 sm:gap-3">
                 {message.role === "assistant" && (
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
-                    <Sparkles className="h-4 w-4 text-primary-foreground" />
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-1 shadow-sm">
+                    <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-primary-foreground" />
                   </div>
                 )}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   {/* Show attachments if present */}
                   {message.attachments && message.attachments.length > 0 && (
                     <div className="mb-3 space-y-2">
@@ -367,7 +367,7 @@ export function ChatInterface() {
                     </div>
                   )}
 
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-sm sm:text-base overflow-x-auto">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       rehypePlugins={[rehypeHighlight, rehypeRaw]}
@@ -376,35 +376,35 @@ export function ChatInterface() {
                         code: ({ className, children, ...props }: any) => {
                           const isInline = !className
                           return isInline ? (
-                            <code className="bg-muted px-1 py-0.5 rounded text-xs" {...props}>
+                            <code className="bg-muted px-1 py-0.5 rounded text-xs sm:text-sm" {...props}>
                               {children}
                             </code>
                           ) : (
-                            <code className={className} {...props}>
+                            <code className={`${className} text-xs sm:text-sm overflow-x-auto block`} {...props}>
                               {children}
                             </code>
                           )
                         },
                         // Customize links
                         a: ({ children, ...props }: any) => (
-                          <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                          <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-words">
                             {children}
                           </a>
                         ),
                         // Customize paragraphs
                         p: ({ children, ...props }: any) => (
-                          <p className="mb-2 last:mb-0" {...props}>
+                          <p className="mb-2 last:mb-0 break-words" {...props}>
                             {children}
                           </p>
                         ),
                         // Customize lists
                         ul: ({ children, ...props }: any) => (
-                          <ul className="list-disc list-inside mb-2" {...props}>
+                          <ul className="list-disc list-inside mb-2 space-y-1" {...props}>
                             {children}
                           </ul>
                         ),
                         ol: ({ children, ...props }: any) => (
-                          <ol className="list-decimal list-inside mb-2" {...props}>
+                          <ol className="list-decimal list-inside mb-2 space-y-1" {...props}>
                             {children}
                           </ol>
                         ),
@@ -421,15 +421,15 @@ export function ChatInterface() {
 
         {isLoading && (
           <div className="flex justify-start animate-in slide-in-from-bottom-4">
-            <Card className="max-w-[85%] p-5 bg-card/80 backdrop-blur shadow-md border-border/50">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-sm">
-                  <Sparkles className="h-4 w-4 text-primary-foreground" />
+            <Card className="max-w-[90%] sm:max-w-[85%] p-3 sm:p-5 bg-card/80 backdrop-blur shadow-md border-border/50">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-sm">
+                  <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-primary-foreground" />
                 </div>
                 <div className="flex gap-1.5">
-                  <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce" />
-                  <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
+                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-primary rounded-full animate-bounce" />
+                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
                 </div>
               </div>
             </Card>
@@ -439,19 +439,19 @@ export function ChatInterface() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="relative pb-4 px-2">
+      {/* Input Area - Fixed at bottom on mobile */}
+      <div className="sticky bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border/50 px-3 sm:px-4 py-3 sm:py-4">
         {/* Call button hovering above search bar */}
-        <div className="absolute left-6 -top-36 z-10">
+        <div className="absolute left-4 sm:left-6 -top-20 sm:-top-36 z-10">
           <Button
             type="button"
             variant="outline"
             size="icon"
             onClick={openVoiceAgent}
-            className="flex-shrink-0 rounded-full h-28 w-28 hover:bg-primary/10 hover:border-primary/50 transition-all hover:scale-105 shadow-lg bg-card/95 backdrop-blur"
+            className="flex-shrink-0 rounded-full h-16 w-16 sm:h-28 sm:w-28 hover:bg-primary/10 hover:border-primary/50 transition-all hover:scale-105 shadow-lg bg-card/95 backdrop-blur"
             disabled={isLoading}
           >
-            <Phone className="h-14 w-14" />
+            <Phone className="h-8 w-8 sm:h-14 sm:w-14" />
           </Button>
         </div>
 
@@ -461,10 +461,10 @@ export function ChatInterface() {
             {attachedFiles.map((file, index) => (
               <div
                 key={index}
-                className="relative group flex items-center gap-2 bg-card/80 backdrop-blur border border-border/50 rounded-lg p-2 pr-8 shadow-sm"
+                className="relative group flex items-center gap-2 bg-card/80 backdrop-blur border border-border/50 rounded-lg p-2 pr-8 shadow-sm max-w-full"
               >
                 {file.type.startsWith('image/') ? (
-                  <div className="relative w-12 h-12 rounded overflow-hidden flex-shrink-0">
+                  <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded overflow-hidden flex-shrink-0">
                     <img
                       src={file.url}
                       alt={file.name}
@@ -472,10 +472,10 @@ export function ChatInterface() {
                     />
                   </div>
                 ) : (
-                  <FileText className="h-8 w-8 text-muted-foreground flex-shrink-0" />
+                  <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground flex-shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate max-w-[150px]">{file.name}</p>
+                  <p className="text-xs sm:text-sm font-medium truncate max-w-[120px] sm:max-w-[150px]">{file.name}</p>
                   <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
                 </div>
                 <Button
@@ -483,9 +483,9 @@ export function ChatInterface() {
                   variant="ghost"
                   size="icon"
                   onClick={() => removeAttachment(index)}
-                  className="absolute right-1 top-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-1 top-1 h-6 w-6 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             ))}
@@ -493,14 +493,14 @@ export function ChatInterface() {
         )}
 
         {/* Search bar */}
-        <form onSubmit={handleSubmit} className="flex gap-3">
+        <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-3">
           <div className="flex-1 relative">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={attachedFiles.length > 0 ? "Add a message (optional)..." : "Ask me anything..."}
+              placeholder={attachedFiles.length > 0 ? "Add a message..." : "Ask me anything..."}
               disabled={isLoading}
-              className="h-12 pl-12 pr-4 rounded-full bg-card/50 backdrop-blur border-border/50 focus:border-primary/50 shadow-sm"
+              className="h-11 sm:h-12 pl-10 sm:pl-12 pr-4 rounded-full bg-card/50 backdrop-blur border-border/50 focus:border-primary/50 shadow-sm text-sm sm:text-base"
             />
             {/* File upload button inside input */}
             <input
@@ -517,7 +517,7 @@ export function ChatInterface() {
               size="icon"
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
-              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-primary/10"
+              className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-primary/10"
             >
               <Paperclip className="h-4 w-4" />
             </Button>
@@ -526,10 +526,10 @@ export function ChatInterface() {
           <Button
             type="submit"
             disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
-            className="flex-shrink-0 rounded-full h-12 w-12 bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg transition-all hover:scale-105 shadow-sm"
+            className="flex-shrink-0 rounded-full h-11 w-11 sm:h-12 sm:w-12 bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg transition-all hover:scale-105 shadow-sm"
             size="icon"
           >
-            <Send className="h-5 w-5" />
+            <Send className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
         </form>
       </div>

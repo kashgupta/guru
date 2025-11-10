@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   title: 'Guru - Your Trusted Immigration Assistant',
   description: 'Your compassionate AI companion helping immigrants navigate healthcare, finance, and legal matters in the US. Get instant, reliable guidance 24/7.',
   generator: 'guru.app',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+  },
   icons: {
     icon: [
       {
