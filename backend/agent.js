@@ -2,7 +2,7 @@ import { Agent, run } from '@openai/agents';
 
 /**
  * OpenAI Agents SDK implementation for:
- * 1. Custom agents for different domains (healthcare, financial, legal)
+ * 1. Custom agents for different domains (healthcare, financial, legal, english, general)
  * 2. Agent routing based on user queries
  * 3. Conversation history support
  * 4. File analysis (images, PDFs, documents) via OpenAI Agents SDK
@@ -45,6 +45,31 @@ Provide practical, step-by-step guidance.`,
 Always clarify that you provide general information, not legal advice, and recommend consulting an attorney for specific cases.`,
     model: 'gpt-4o',
   },
+  english: {
+    description: 'An English language learning assistant helping immigrants improve their English communication skills and understand English content',
+    prompt: `You are a friendly and patient English language learning assistant helping immigrants:
+- Learn how to have specific conversations in English (e.g., talking to doctors, employers, landlords, customer service)
+- Practice common English phrases and expressions for everyday situations
+- Understand the meaning of English text in pictures, documents, forms, and signs
+- Explain English idioms, slang, and cultural expressions
+- Provide pronunciation tips and grammar explanations when needed
+- Help translate and explain official documents, letters, or notices written in English
+- Teach practical English for daily life in the US
+
+When analyzing images or documents:
+- Clearly explain what the text says in simple terms
+- Translate key information if needed
+- Explain any important terms or concepts
+- Provide context about what action might be needed (if it's a bill, form, notice, etc.)
+
+Always be encouraging, patient, and explain things in simple, clear language. Break down complex English into easy-to-understand terms.`,
+    model: 'gpt-4o',
+  },
+  general: {
+    description: 'A general-purpose assistant for questions outside the specialized domains',
+    prompt: `You are a helpful assistant. The folks you are often helping are often immigrants and often don't speak English.`,
+    model: 'gpt-4o',
+  },
 };
 
 // Create agent instances
@@ -69,7 +94,7 @@ function getAgent(agentName) {
 
 /**
  * Run an agent with user prompt and optional conversation history
- * @param {string} agentName - The agent to run (healthcare, financial, legal)
+ * @param {string} agentName - The agent to run (healthcare, financial, legal, english, general)
  * @param {string} userPrompt - The user's message
  * @param {Object} options - Additional options
  * @param {boolean} options.silent - Suppress console output
@@ -194,7 +219,7 @@ async function runAgent(agentName, userPrompt, options = {}) {
 
 /**
  * Routes a user prompt to the most appropriate agent
- * Uses OpenAI to determine which agent (healthcare, financial, or legal) is best suited
+ * Uses OpenAI to determine which agent (healthcare, financial, legal, english, or general) is best suited
  */
 async function routeToAgent(userPrompt) {
   console.log('\n' + '='.repeat(80));
@@ -208,10 +233,12 @@ Available agents:
 1. healthcare - For questions about health insurance, medical care, healthcare access, vaccinations, emergency care, preventive care, medical bills
 2. financial - For questions about banking, credit, taxes, budgeting, financial planning, opening accounts
 3. legal - For questions about immigration paperwork, visas, legal rights, document requirements, legal processes
+4. english - For questions about learning English, understanding English conversations, explaining English text/documents/images, English phrases, grammar, pronunciation, translation help
+5. general - For any other questions that don't fit the above categories (general knowledge, recipes, weather, sports, technology, etc.)
 
 User question: "${userPrompt}"
 
-Respond with ONLY one word: "healthcare", "financial", or "legal". Do not include any explanation or additional text.`;
+Respond with ONLY one word: "healthcare", "financial", "legal", "english", or "general". Do not include any explanation or additional text.`;
 
   try {
     console.log('🤖 [ROUTER] Calling OpenAI for routing decision...');
@@ -235,10 +262,10 @@ Respond with ONLY one word: "healthcare", "financial", or "legal". Do not includ
     console.log(`📥 [ROUTER] Received routing response: "${routingResponse}"`);
 
     // Validate and normalize the response
-    const validAgents = ['healthcare', 'financial', 'legal'];
-    const selectedAgent = validAgents.find(agent =>
-      routingResponse?.includes(agent)
-    ) || 'healthcare'; // Default to healthcare if unclear
+    const validAgents = ['healthcare', 'financial', 'legal', 'english', 'general'];
+    const selectedAgent = validAgents.includes(routingResponse)
+      ? routingResponse
+      : 'general'; // Default to general if unclear
 
     console.log(`✅ [ROUTER] Final agent selection: ${selectedAgent}`);
     console.log('='.repeat(80) + '\n');
@@ -247,10 +274,10 @@ Respond with ONLY one word: "healthcare", "financial", or "legal". Do not includ
   } catch (error) {
     console.error('❌ [ROUTER] Error routing to agent:', error.message);
     console.error(`   Error stack: ${error.stack}`);
-    console.log('⚠️  [ROUTER] Defaulting to healthcare agent');
+    console.log('⚠️  [ROUTER] Defaulting to general agent');
     console.log('='.repeat(80) + '\n');
-    // Default to healthcare on error
-    return 'healthcare';
+    // Default to general on error
+    return 'general';
   }
 }
 
