@@ -4,7 +4,7 @@ import { ChatInterface } from "@/components/chat-interface"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Heart, MessageCircle, Shield, Sparkles, Scale, DollarSign, Stethoscope } from "lucide-react"
+import { Heart, Scale, DollarSign, Stethoscope } from "lucide-react"
 
 export default function Home() {
   const [showChat, setShowChat] = useState(false)
