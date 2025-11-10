@@ -134,9 +134,11 @@ async function handleWhatsAppWebhook(req, res) {
   try {
     // Validate Twilio signature for security
     const twilioSignature = req.headers['x-twilio-signature'];
-    const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
-
+    // Use X-Forwarded-Proto to get the actual protocol (important for proxies like Render)
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const url = `${protocol}://${req.get('host')}${req.originalUrl}`;
     console.log('🔒 [WHATSAPP WEBHOOK] Validating Twilio signature...');
+    console.log(`   Protocol: ${protocol} (forwarded: ${req.headers['x-forwarded-proto']}, req.protocol: ${req.protocol})`);
     console.log(`   URL: ${url}`);
     console.log(`   Signature present: ${!!twilioSignature}`);
 
