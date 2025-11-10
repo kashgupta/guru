@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Send, Sparkles, ArrowLeft, Phone } from "lucide-react"
+import { Send, Sparkles, ArrowLeft, Phone, Paperclip, X, FileText, Image as ImageIcon } from "lucide-react"
 import { VoiceAgentDialog } from "@/components/voice-agent"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -13,10 +13,18 @@ import rehypeHighlight from "rehype-highlight"
 import rehypeRaw from "rehype-raw"
 import "highlight.js/styles/github-dark.css"
 
+interface FileAttachment {
+  name: string
+  type: string
+  size: number
+  url: string // Data URL or uploaded URL
+}
+
 interface Message {
   id: string
   role: "user" | "assistant"
   content: string
+  attachments?: FileAttachment[]
 }
 
 // Agent system prompts matching backend
@@ -51,7 +59,9 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false)
   const [isVoiceAgentOpen, setIsVoiceAgentOpen] = useState(false)
   const [currentAgent, setCurrentAgent] = useState<keyof typeof AGENT_PROMPTS>('healthcare')
+  const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Show initial greeting on first load
   useEffect(() => {
@@ -81,44 +91,123 @@ export function ChatInterface() {
     setIsVoiceAgentOpen(true)
   }
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const newAttachments: FileAttachment[] = []
+
+    for (const file of Array.from(files)) {
+      // Validate file type (images and common documents)
+      const validTypes = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'application/pdf', 'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain'
+      ]
+
+      if (!validTypes.includes(file.type)) {
+        alert(`File type ${file.type} is not supported. Please upload images or documents (PDF, Word, Text).`)
+        continue
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File ${file.name} is too large. Maximum size is 10MB.`)
+        continue
+      }
+
+      // Convert to data URL for preview and sending
+      const reader = new FileReader()
+      const dataUrl = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string)
+        reader.readAsDataURL(file)
+      })
+
+      newAttachments.push({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: dataUrl
+      })
+    }
+
+    setAttachedFiles(prev => [...prev, ...newAttachments])
+  }
+
+  const removeAttachment = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B'
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if ((!input.trim() && attachedFiles.length === 0) || isLoading) return
 
-    const userMessage = input.trim()
+    const userMessage = input.trim() || "Please analyze these files"
     console.log("=== User sent message ===")
     console.log("Message:", userMessage)
+    console.log("Attachments:", attachedFiles.length)
 
-    // Add user message to UI
+    // Add user message to UI with attachments
     const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
       content: userMessage,
+      attachments: attachedFiles.length > 0 ? [...attachedFiles] : undefined,
     }
     setMessages((prev) => [...prev, userMsg])
     setInput("")
+    const currentAttachments = [...attachedFiles]
+    setAttachedFiles([])
     setIsLoading(true)
 
     try {
       console.log("Calling /api/chat endpoint...")
 
+      // Prepare form data for file upload
+      const formData = new FormData()
+
+      // Add conversation history
+      const conversationHistory = [
+        ...messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+          attachments: msg.attachments,
+        })),
+        {
+          role: "user",
+          content: userMessage,
+        },
+      ]
+
+      formData.append('messages', JSON.stringify(conversationHistory))
+
+      // Add files if any
+      if (currentAttachments.length > 0) {
+        currentAttachments.forEach((attachment, index) => {
+          // Convert data URL back to blob for upload
+          const arr = attachment.url.split(',')
+          const mime = arr[0].match(/:(.*?);/)?.[1] || ''
+          const bstr = atob(arr[1])
+          let n = bstr.length
+          const u8arr = new Uint8Array(n)
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n)
+          }
+          const blob = new Blob([u8arr], { type: mime })
+          formData.append('files', blob, attachment.name)
+        })
+      }
+
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: [
-            ...messages.map((msg) => ({
-              role: msg.role,
-              content: msg.content,
-            })),
-            {
-              role: "user",
-              content: userMessage,
-            },
-          ],
-        }),
+        body: formData, // Send as FormData instead of JSON
       })
 
       console.log("API Response status:", response.status)
@@ -248,51 +337,82 @@ export function ChatInterface() {
                     <Sparkles className="h-4 w-4 text-primary-foreground" />
                   </div>
                 )}
-                <div className="flex-1 prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight, rehypeRaw]}
-                    components={{
-                      // Customize code blocks
-                      code: ({ className, children, ...props }: any) => {
-                        const isInline = !className
-                        return isInline ? (
-                          <code className="bg-muted px-1 py-0.5 rounded text-xs" {...props}>
+                <div className="flex-1">
+                  {/* Show attachments if present */}
+                  {message.attachments && message.attachments.length > 0 && (
+                    <div className="mb-3 space-y-2">
+                      {message.attachments.map((attachment, idx) => (
+                        <div key={idx} className={`rounded-lg overflow-hidden border ${
+                          message.role === "user"
+                            ? "border-primary-foreground/20 bg-primary-foreground/10"
+                            : "border-border bg-muted/30"
+                        }`}>
+                          {attachment.type.startsWith('image/') ? (
+                            <img
+                              src={attachment.url}
+                              alt={attachment.name}
+                              className="max-w-full h-auto rounded-lg"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-3 p-3">
+                              <FileText className="h-8 w-8 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate text-sm">{attachment.name}</p>
+                                <p className="text-xs opacity-70">{formatFileSize(attachment.size)}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                      components={{
+                        // Customize code blocks
+                        code: ({ className, children, ...props }: any) => {
+                          const isInline = !className
+                          return isInline ? (
+                            <code className="bg-muted px-1 py-0.5 rounded text-xs" {...props}>
+                              {children}
+                            </code>
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          )
+                        },
+                        // Customize links
+                        a: ({ children, ...props }: any) => (
+                          <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                             {children}
-                          </code>
-                        ) : (
-                          <code className={className} {...props}>
+                          </a>
+                        ),
+                        // Customize paragraphs
+                        p: ({ children, ...props }: any) => (
+                          <p className="mb-2 last:mb-0" {...props}>
                             {children}
-                          </code>
-                        )
-                      },
-                      // Customize links
-                      a: ({ children, ...props }: any) => (
-                        <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                          {children}
-                        </a>
-                      ),
-                      // Customize paragraphs
-                      p: ({ children, ...props }: any) => (
-                        <p className="mb-2 last:mb-0" {...props}>
-                          {children}
-                        </p>
-                      ),
-                      // Customize lists
-                      ul: ({ children, ...props }: any) => (
-                        <ul className="list-disc list-inside mb-2" {...props}>
-                          {children}
-                        </ul>
-                      ),
-                      ol: ({ children, ...props }: any) => (
-                        <ol className="list-decimal list-inside mb-2" {...props}>
-                          {children}
-                        </ol>
-                      ),
-                    }}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
+                          </p>
+                        ),
+                        // Customize lists
+                        ul: ({ children, ...props }: any) => (
+                          <ul className="list-disc list-inside mb-2" {...props}>
+                            {children}
+                          </ul>
+                        ),
+                        ol: ({ children, ...props }: any) => (
+                          <ol className="list-decimal list-inside mb-2" {...props}>
+                            {children}
+                          </ol>
+                        ),
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -335,21 +455,77 @@ export function ChatInterface() {
           </Button>
         </div>
 
+        {/* Attached files preview */}
+        {attachedFiles.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {attachedFiles.map((file, index) => (
+              <div
+                key={index}
+                className="relative group flex items-center gap-2 bg-card/80 backdrop-blur border border-border/50 rounded-lg p-2 pr-8 shadow-sm"
+              >
+                {file.type.startsWith('image/') ? (
+                  <div className="relative w-12 h-12 rounded overflow-hidden flex-shrink-0">
+                    <img
+                      src={file.url}
+                      alt={file.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <FileText className="h-8 w-8 text-muted-foreground flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate max-w-[150px]">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeAttachment(index)}
+                  className="absolute right-1 top-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Search bar */}
         <form onSubmit={handleSubmit} className="flex gap-3">
           <div className="flex-1 relative">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask me anything..."
+              placeholder={attachedFiles.length > 0 ? "Add a message (optional)..." : "Ask me anything..."}
               disabled={isLoading}
-              className="h-12 pr-12 rounded-full bg-card/50 backdrop-blur border-border/50 focus:border-primary/50 shadow-sm"
+              className="h-12 pl-12 pr-4 rounded-full bg-card/50 backdrop-blur border-border/50 focus:border-primary/50 shadow-sm"
             />
+            {/* File upload button inside input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full hover:bg-primary/10"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
           </div>
 
           <Button
             type="submit"
-            disabled={!input.trim() || isLoading}
+            disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
             className="flex-shrink-0 rounded-full h-12 w-12 bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg transition-all hover:scale-105 shadow-sm"
             size="icon"
           >

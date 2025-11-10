@@ -1,10 +1,39 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import multer from 'multer';
 import { runAgent, routeToAgent } from './agent.js';
 import { handleWhatsAppWebhook, handleStatusCallback } from './whatsapp.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Configure multer for file uploads (store in memory)
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images and documents
+    const allowedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type ${file.mimetype} not supported`));
+    }
+  }
+});
 
 // Middleware
 app.use(cors());
@@ -16,27 +45,49 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Guru backend API is running' });
 });
 
-// Main chat endpoint
-app.post('/api/chat', async (req, res) => {
+// Main chat endpoint - now supports file uploads
+app.post('/api/chat', upload.array('files', 10), async (req, res) => {
   try {
-    const { prompt } = req.body;
+    const { prompt, conversationHistory } = req.body;
+    const files = req.files;
 
-    if (!prompt || typeof prompt !== 'string') {
+    if ((!prompt || typeof prompt !== 'string') && (!files || files.length === 0)) {
       return res.status(400).json({
         error: 'Invalid request',
-        message: 'Please provide a valid prompt string',
+        message: 'Please provide a valid prompt string or files',
       });
     }
 
     console.log(`\n📥 Received prompt: "${prompt}"`);
+    console.log(`📎 Files attached: ${files ? files.length : 0}`);
+
+    if (files && files.length > 0) {
+      files.forEach(file => {
+        console.log(`  - ${file.originalname} (${file.mimetype}, ${(file.size / 1024).toFixed(2)} KB)`);
+      });
+    }
+
+    // Parse conversation history if provided
+    let history = [];
+    if (conversationHistory) {
+      try {
+        history = JSON.parse(conversationHistory);
+      } catch (e) {
+        console.log('⚠️ Failed to parse conversation history');
+      }
+    }
 
     // Route to the appropriate agent
     console.log('🔀 Routing to appropriate agent...');
     const selectedAgent = await routeToAgent(prompt);
     console.log(`✅ Selected agent: ${selectedAgent}`);
 
-    // Run the agent with the user prompt
-    const result = await runAgent(selectedAgent, prompt, { silent: false });
+    // Run the agent with the user prompt and files
+    const result = await runAgent(selectedAgent, prompt, {
+      silent: false,
+      files: files,
+      conversationHistory: history
+    });
 
     // Return the response
     res.json({
@@ -47,6 +98,7 @@ app.post('/api/chat', async (req, res) => {
         duration_ms: result.duration_ms,
         cost_usd: result.cost_usd,
         usage: result.usage,
+        files_processed: files ? files.length : 0,
       },
     });
   } catch (error) {
