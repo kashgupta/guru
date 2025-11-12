@@ -49,14 +49,19 @@ function handleWhatsAppVoiceCall(req, res) {
   try {
     const { From: from, To: to, CallSid: callSid } = req.body;
 
+    // Extract phone number (remove 'whatsapp:' prefix)
+    const phoneNumber = from ? from.replace('whatsapp:', '') : 'UNKNOWN';
+    
+    // ⭐ PROMINENT PHONE NUMBER LOG ⭐
+    console.log('\n' + '📞'.repeat(40));
+    console.log(`📱 INCOMING VOICE CALL FROM: ${phoneNumber}`);
+    console.log('📞'.repeat(40) + '\n');
+
     console.log('📦 [WHATSAPP VOICE] Call details:');
     console.log(`   From: ${from}`);
+    console.log(`   Phone Number: ${phoneNumber}`);
     console.log(`   To: ${to}`);
     console.log(`   CallSid: ${callSid}`);
-
-    // Extract phone number (remove 'whatsapp:' prefix)
-    const phoneNumber = from.replace('whatsapp:', '');
-    console.log(`📱 [WHATSAPP VOICE] Phone number: ${phoneNumber}`);
 
     // Create session for this call
     const session = getWhatsAppSession(phoneNumber);

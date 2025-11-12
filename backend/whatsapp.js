@@ -132,6 +132,23 @@ async function handleWhatsAppWebhook(req, res) {
   console.log('='.repeat(80));
 
   try {
+    // Extract phone number FIRST for better logging
+    const {
+      From: from,
+      Body: body,
+      NumMedia: numMedia,
+      MediaUrl0: mediaUrl,
+      MediaContentType0: mediaContentType,
+    } = req.body;
+
+    // Extract phone number (remove 'whatsapp:' prefix)
+    const phoneNumber = from ? from.replace('whatsapp:', '') : 'UNKNOWN';
+    
+    // ⭐ PROMINENT PHONE NUMBER LOG ⭐
+    console.log('\n' + '🔔'.repeat(40));
+    console.log(`📱 INCOMING MESSAGE FROM: ${phoneNumber}`);
+    console.log('🔔'.repeat(40) + '\n');
+
     // Validate Twilio signature for security
     const twilioSignature = req.headers['x-twilio-signature'];
     // Use X-Forwarded-Proto to get the actual protocol (important for proxies like Render)
@@ -156,23 +173,12 @@ async function handleWhatsAppWebhook(req, res) {
       return res.status(403).send('Forbidden');
     }
 
-    const {
-      From: from,
-      Body: body,
-      NumMedia: numMedia,
-      MediaUrl0: mediaUrl,
-      MediaContentType0: mediaContentType,
-    } = req.body;
-
     console.log('📦 [WHATSAPP WEBHOOK] Request body parsed:');
     console.log(`   From: ${from}`);
+    console.log(`   Phone Number: ${phoneNumber}`);
     console.log(`   Body: ${body || '(empty)'}`);
     console.log(`   NumMedia: ${numMedia || 0}`);
     console.log(`   MediaContentType: ${mediaContentType || 'none'}`);
-
-    // Extract phone number (remove 'whatsapp:' prefix)
-    const phoneNumber = from.replace('whatsapp:', '');
-    console.log(`📱 [WHATSAPP WEBHOOK] Phone number extracted: ${phoneNumber}`);
 
     // Get or create session
     console.log('💾 [WHATSAPP WEBHOOK] Getting/creating session for user...');
@@ -244,8 +250,8 @@ async function processMessageAsync(phoneNumber, userMessage, session) {
   console.log('\n' + '='.repeat(80));
   console.log('⚙️  [ASYNC PROCESSOR] Starting message processing');
   console.log('='.repeat(80));
-  console.log(`   Phone: ${phoneNumber}`);
-  console.log(`   Message: "${userMessage}"`);
+  console.log(`\n📱 USER PHONE NUMBER: ${phoneNumber}`);
+  console.log(`💬 USER MESSAGE: "${userMessage}"\n`);
 
   try {
     // Add to conversation history
@@ -282,11 +288,13 @@ async function processMessageAsync(phoneNumber, userMessage, session) {
     console.log(`   History length: ${session.conversationHistory.length}`);
 
     // Send response back to user
-    console.log(`\n📤 [ASYNC PROCESSOR] Sending response to WhatsApp user ${phoneNumber}...`);
+    console.log(`\n📤 [ASYNC PROCESSOR] Sending response to WhatsApp user...`);
     console.log(`   Response preview: "${result.response.substring(0, 100)}..."`);
     await sendWhatsAppMessage(phoneNumber, result.response);
 
-    console.log(`✅ [ASYNC PROCESSOR] Response sent successfully to ${phoneNumber}`);
+    console.log('\n' + '✅'.repeat(40));
+    console.log(`✅ RESPONSE SENT TO: ${phoneNumber}`);
+    console.log('✅'.repeat(40));
     console.log('='.repeat(80) + '\n');
   } catch (error) {
     console.error('\n❌ [ASYNC PROCESSOR] Error processing message:');
