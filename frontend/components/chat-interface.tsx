@@ -461,7 +461,7 @@ export function ChatInterface() {
             className="flex-shrink-0 rounded-full h-16 w-16 sm:h-28 sm:w-28 hover:bg-[#25D366]/10 hover:border-[#25D366]/50 transition-all hover:scale-105 shadow-lg bg-card/95 backdrop-blur"
           >
             <a
-              href="https://wa.me/18557732312?text=i%20would%20like%20help%20with"
+              href="https://wa.me/15558572494?text=i%20would%20like%20help%20with"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center"
