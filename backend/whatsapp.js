@@ -1,6 +1,7 @@
 import twilio from 'twilio';
 import axios from 'axios';
 import { runAgent, routeToAgent } from './agent.js';
+import { getConversation, saveConversation } from './supabase.js';
 import OpenAI from 'openai';
 
 /**
@@ -254,7 +255,13 @@ async function processMessageAsync(phoneNumber, userMessage, session) {
   console.log(`💬 USER MESSAGE: "${userMessage}"\n`);
 
   try {
-    // Add to conversation history
+    // Get existing conversation from Supabase
+    console.log('🔍 [ASYNC PROCESSOR] Looking up conversation in Supabase...');
+    const { conversationId: existingConversationId, lastAgent } = await getConversation(phoneNumber);
+    console.log(`   Existing conversation ID: ${existingConversationId || 'None'}`);
+    console.log(`   Last agent used: ${lastAgent || 'None'}`);
+
+    // Add to in-memory conversation history (for backward compatibility)
     console.log('💾 [ASYNC PROCESSOR] Adding user message to conversation history...');
     session.conversationHistory.push({
       role: 'user',
@@ -269,15 +276,25 @@ async function processMessageAsync(phoneNumber, userMessage, session) {
     const selectedAgent = await routeToAgent(userMessage);
     console.log(`✅ [ASYNC PROCESSOR] Agent selected: ${selectedAgent}`);
 
-    // Run the agent
+    // Run the agent with existing conversation ID if available
     console.log(`\n🤖 [ASYNC PROCESSOR] Running ${selectedAgent} agent...`);
-    const result = await runAgent(selectedAgent, userMessage, { silent: false });
+    const result = await runAgent(selectedAgent, userMessage, {
+      silent: false,
+      conversationId: existingConversationId,
+    });
     console.log(`✅ [ASYNC PROCESSOR] Agent completed`);
     console.log(`   Response length: ${result.response?.length || 0} characters`);
     console.log(`   Success: ${result.success}`);
     console.log(`   Duration: ${result.duration_ms}ms`);
+    console.log(`   New conversation ID: ${result.conversationId}`);
 
-    // Add to conversation history
+    // Save the conversation ID to Supabase
+    if (result.conversationId) {
+      console.log('💾 [ASYNC PROCESSOR] Saving conversation to Supabase...');
+      await saveConversation(phoneNumber, result.conversationId, selectedAgent);
+    }
+
+    // Add to in-memory conversation history (for backward compatibility)
     console.log('💾 [ASYNC PROCESSOR] Adding assistant response to history...');
     session.conversationHistory.push({
       role: 'assistant',
@@ -329,13 +346,22 @@ function cleanupOldSessions() {
   for (const [phoneNumber, session] of sessions.entries()) {
     if (now - session.lastActivity > timeout) {
       sessions.delete(phoneNumber);
-      console.log(`🧹 Cleaned up session for ${phoneNumber}`);
+      console.log(`🧹 Cleaned up in-memory session for ${phoneNumber}`);
     }
   }
 }
 
-// Run cleanup every 10 minutes
+// Clean up Supabase conversations periodically (30 days)
+async function cleanupSupabaseConversations() {
+  const { cleanupOldConversations } = await import('./supabase.js');
+  await cleanupOldConversations();
+}
+
+// Run in-memory cleanup every 10 minutes
 setInterval(cleanupOldSessions, 10 * 60 * 1000);
+
+// Run Supabase cleanup every 24 hours
+setInterval(cleanupSupabaseConversations, 24 * 60 * 60 * 1000);
 
 export {
   handleWhatsAppWebhook,

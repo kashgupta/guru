@@ -12,7 +12,8 @@
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
       "Bash(xargs:*)",
-      "Bash(exit 0)"
+      "Bash(exit 0)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

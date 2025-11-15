@@ -11,6 +11,8 @@ import {
   setupMediaStreamWebSocket,
 } from './whatsapp-voice.js';
 import { REALTIME_CONFIG } from './voice-config.js';
+import { createOrGetUser } from './database.js';
+import { getConversation, saveConversation } from './supabase.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -55,10 +57,46 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Guru backend API is running' });
 });
 
-// Main chat endpoint - now supports file uploads
+// Phone number submission endpoint
+app.post('/api/submit-phone', async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+
+    if (!phoneNumber || typeof phoneNumber !== 'string') {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'Please provide a valid phone number',
+      });
+    }
+
+    console.log(`📱 Received phone number submission: ${phoneNumber}`);
+
+    // Create or get user in database
+    const user = await createOrGetUser(phoneNumber);
+
+    console.log(`✅ User created/retrieved: ${user.id}`);
+
+    // Return success with user data
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        phoneNumber: user.phone_number,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Error processing phone number:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+    });
+  }
+});
+
+// Main chat endpoint - now supports file uploads and conversation state
 app.post('/api/chat', upload.array('files', 10), async (req, res) => {
   try {
-    const { prompt, conversationHistory } = req.body;
+    const { prompt, phoneNumber } = req.body;
     const files = req.files;
 
     if ((!prompt || typeof prompt !== 'string') && (!files || files.length === 0)) {
@@ -69,6 +107,7 @@ app.post('/api/chat', upload.array('files', 10), async (req, res) => {
     }
 
     console.log(`\n📥 Received prompt: "${prompt}"`);
+    console.log(`📱 User phone: ${phoneNumber || 'not provided'}`);
     console.log(`📎 Files attached: ${files ? files.length : 0}`);
 
     if (files && files.length > 0) {
@@ -77,14 +116,14 @@ app.post('/api/chat', upload.array('files', 10), async (req, res) => {
       });
     }
 
-    // Parse conversation history if provided
-    let history = [];
-    if (conversationHistory) {
-      try {
-        history = JSON.parse(conversationHistory);
-      } catch (e) {
-        console.log('⚠️ Failed to parse conversation history');
-      }
+    // Get existing conversation from Supabase if phone number provided
+    let existingConversationId = null;
+    if (phoneNumber) {
+      console.log('🔍 Looking up conversation in Supabase...');
+      const { conversationId, lastAgent } = await getConversation(phoneNumber);
+      existingConversationId = conversationId;
+      console.log(`   Existing conversation ID: ${existingConversationId || 'None'}`);
+      console.log(`   Last agent used: ${lastAgent || 'None'}`);
     }
 
     // Route to the appropriate agent
@@ -92,18 +131,25 @@ app.post('/api/chat', upload.array('files', 10), async (req, res) => {
     const selectedAgent = await routeToAgent(prompt);
     console.log(`✅ Selected agent: ${selectedAgent}`);
 
-    // Run the agent with the user prompt and files
+    // Run the agent with conversation state
     const result = await runAgent(selectedAgent, prompt, {
       silent: false,
       files: files,
-      conversationHistory: history
+      conversationId: existingConversationId,
     });
+
+    // Save the conversation ID to Supabase if phone number provided
+    if (phoneNumber && result.conversationId) {
+      console.log('💾 Saving conversation to Supabase...');
+      await saveConversation(phoneNumber, result.conversationId, selectedAgent);
+    }
 
     // Return the response
     res.json({
       success: true,
       agent: selectedAgent,
       response: result.response,
+      conversationId: result.conversationId, // Return conversation ID to frontend
       metadata: {
         duration_ms: result.duration_ms,
         cost_usd: result.cost_usd,

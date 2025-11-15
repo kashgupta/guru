@@ -1,3 +1,5 @@
+import { cookies } from 'next/headers';
+
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
@@ -5,6 +7,9 @@ export async function POST(req: Request) {
   console.log("=== API Route: POST /api/chat ===")
 
   try {
+    // Get user phone from cookie
+    const cookieStore = await cookies();
+    const userPhone = cookieStore.get('user_phone')?.value;
     // Check if request is multipart/form-data
     const contentType = req.headers.get('content-type') || ''
     const isFormData = contentType.includes('multipart/form-data')
@@ -70,6 +75,12 @@ export async function POST(req: Request) {
       const backendFormData = new FormData()
       backendFormData.append('prompt', userPrompt)
 
+      // Add phone number if available
+      if (userPhone) {
+        backendFormData.append('phoneNumber', decodeURIComponent(userPhone))
+        console.log("Added phone number to request:", decodeURIComponent(userPhone))
+      }
+
       // Add conversation history
       const conversationHistory = messages.slice(0, -1).map(msg => ({
         role: msg.role,
@@ -90,10 +101,16 @@ export async function POST(req: Request) {
       })
     } else {
       // Send as JSON
+      const requestBody: any = { prompt: userPrompt }
+      if (userPhone) {
+        requestBody.phoneNumber = decodeURIComponent(userPhone)
+        console.log("Added phone number to request:", decodeURIComponent(userPhone))
+      }
+
       backendRes = await fetch(`${backendUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userPrompt }),
+        body: JSON.stringify(requestBody),
       })
     }
 

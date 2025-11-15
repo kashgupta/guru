@@ -1,12 +1,14 @@
 import { Agent, run } from '@openai/agents';
+import OpenAI from 'openai';
 
 /**
  * OpenAI Agents SDK implementation for:
  * 1. Custom agents for different domains (healthcare, financial, legal, english, general)
  * 2. Agent routing based on user queries
- * 3. Conversation history support
+ * 3. Conversation history support via Sessions
  * 4. File analysis (images, PDFs, documents) via OpenAI Agents SDK
  * 5. Unified code path using Agents SDK for all requests
+ * 6. Persistent conversation state using OpenAI Conversations API
  */
 
 // Define custom agents for different domains
@@ -93,24 +95,24 @@ function getAgent(agentName) {
 }
 
 /**
- * Run an agent with user prompt and optional conversation history
+ * Run an agent with user prompt and optional conversation state
  * @param {string} agentName - The agent to run (healthcare, financial, legal, english, general)
  * @param {string} userPrompt - The user's message
  * @param {Object} options - Additional options
  * @param {boolean} options.silent - Suppress console output
- * @param {Array} options.conversationHistory - Array of previous messages [{role, content}]
+ * @param {string} options.conversationId - OpenAI conversation ID to continue (optional)
  * @param {Array} options.files - Array of uploaded files (multer file objects)
  * @returns {Promise<Object>} Response object with agent response and metadata
  */
 async function runAgent(agentName, userPrompt, options = {}) {
-  const { silent = false, conversationHistory = [], files = [] } = options;
+  const { silent = false, conversationId = null, files = [] } = options;
 
   console.log('\n' + '='.repeat(80));
   console.log(`🤖 [AGENT:${agentName.toUpperCase()}] Starting agent execution`);
   console.log('='.repeat(80));
   console.log(`   Prompt: "${userPrompt}"`);
   console.log(`   Files: ${files.length}`);
-  console.log(`   Conversation history: ${conversationHistory.length} messages`);
+  console.log(`   Conversation ID: ${conversationId || 'New conversation'}`);
   console.log(`   Silent mode: ${silent}`);
 
   const agent = agents[agentName];
@@ -127,59 +129,56 @@ async function runAgent(agentName, userPrompt, options = {}) {
     const startTime = Date.now();
     console.log(`⏱️  [AGENT:${agentName.toUpperCase()}] Start time: ${new Date(startTime).toISOString()}`);
 
-    // Get or create agent instance
-    console.log(`🏗️  [AGENT:${agentName.toUpperCase()}] Getting agent instance...`);
-    const agentInstance = getAgent(agentName);
-    console.log(`✅ [AGENT:${agentName.toUpperCase()}] Agent instance ready`);
+    // Use OpenAI Conversations API + Responses API for persistent state
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    // Build the prompt with conversation history if provided
-    let fullPrompt = userPrompt;
-    if (conversationHistory.length > 0) {
-      console.log(`📜 [AGENT:${agentName.toUpperCase()}] Adding conversation history to prompt...`);
-      // Format conversation history for context
-      const historyText = conversationHistory
-        .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
-        .join('\n');
-      fullPrompt = `Previous conversation:\n${historyText}\n\nCurrent question: ${userPrompt}`;
+    console.log(`🚀 [AGENT:${agentName.toUpperCase()}] Running OpenAI with Conversations API...`);
+    console.log(`   Prompt length: ${userPrompt.length} characters`);
+
+    // If no conversation ID, create a new Conversation object first
+    let conversationToUse = conversationId;
+    if (!conversationToUse) {
+      console.log(`🆕 [AGENT:${agentName.toUpperCase()}] Creating new Conversation object`);
+      const conversation = await openai.conversations.create();
+      conversationToUse = conversation.id;
+      console.log(`   Created conversation: ${conversationToUse}`);
+    } else {
+      console.log(`📜 [AGENT:${agentName.toUpperCase()}] Using existing conversation: ${conversationToUse}`);
     }
 
-    // Convert multer files to File objects if present
-    let fileObjects = [];
-    if (files && files.length > 0) {
-      console.log(`📎 [AGENT:${agentName.toUpperCase()}] Converting ${files.length} file(s) for Agents SDK...`);
-      fileObjects = await Promise.all(
-        files.map(async (file) => {
-          return new File([file.buffer], file.originalname, { type: file.mimetype });
-        })
-      );
-      console.log(`✅ [AGENT:${agentName.toUpperCase()}] Files converted successfully`);
-    }
+    // Build the request parameters for Responses API with Conversation
+    const responseParams = {
+      model: agent.model,
+      input: [{ role: "user", content: userPrompt }],
+      instructions: agent.prompt,
+      conversation: conversationToUse, // Link to Conversation object
+    };
 
-    console.log(`🚀 [AGENT:${agentName.toUpperCase()}] Running agent with prompt...`);
-    console.log(`   Full prompt length: ${fullPrompt.length} characters`);
-
-    // Run the agent using the SDK's run() function with files if present
-    const runOptions = fileObjects.length > 0 ? { files: fileObjects } : {};
-    const response = await run(agentInstance, fullPrompt, runOptions);
+    // Call OpenAI Responses API
+    const response = await openai.responses.create(responseParams);
 
     const duration_ms = Date.now() - startTime;
     console.log(`⏱️  [AGENT:${agentName.toUpperCase()}] Agent completed in ${duration_ms}ms`);
 
-    // Extract the assistant's response
-    const assistantMessage = response.finalOutput || '';
+    // Extract the assistant's response from Responses API format
+    const assistantMessage = response.output_text || '';
     console.log(`📤 [AGENT:${agentName.toUpperCase()}] Response generated`);
     console.log(`   Response length: ${assistantMessage.length} characters`);
     console.log(`   Response preview: "${assistantMessage.substring(0, 100)}..."`);
 
+    // Use the conversation ID (not response ID) for persistence
+    const newConversationId = conversationToUse;
+    console.log(`🔑 [AGENT:${agentName.toUpperCase()}] Conversation ID: ${newConversationId}`);
+
     // Calculate approximate cost (rough estimate based on token usage)
     const usage = response.usage || {};
     console.log(`💰 [AGENT:${agentName.toUpperCase()}] Token usage:`);
-    console.log(`   Input tokens: ${usage.inputTokens || 0}`);
-    console.log(`   Output tokens: ${usage.outputTokens || 0}`);
-    console.log(`   Total tokens: ${usage.totalTokens || 0}`);
+    console.log(`   Input tokens: ${usage.input_tokens || 0}`);
+    console.log(`   Output tokens: ${usage.output_tokens || 0}`);
+    console.log(`   Total tokens: ${usage.total_tokens || 0}`);
 
-    const inputCost = (usage.inputTokens || 0) * 0.0000025; // $2.50/1M tokens for GPT-4o
-    const outputCost = (usage.outputTokens || 0) * 0.000010; // $10/1M tokens for GPT-4o
+    const inputCost = (usage.input_tokens || 0) * 0.0000025; // $2.50/1M tokens for GPT-4o
+    const outputCost = (usage.output_tokens || 0) * 0.000010; // $10/1M tokens for GPT-4o
     const cost_usd = inputCost + outputCost;
     console.log(`   Estimated cost: $${cost_usd.toFixed(6)}`);
 
@@ -193,12 +192,12 @@ async function runAgent(agentName, userPrompt, options = {}) {
       duration_ms,
       cost_usd,
       usage: {
-        input_tokens: usage.inputTokens || 0,
-        output_tokens: usage.outputTokens || 0,
-        total_tokens: usage.totalTokens || 0,
+        input_tokens: usage.input_tokens || 0,
+        output_tokens: usage.output_tokens || 0,
+        total_tokens: usage.total_tokens || 0,
       },
       files_processed: files ? files.length : 0,
-      conversationId: response.conversationId || null,
+      conversationId: newConversationId,
     };
   } catch (error) {
     console.error(`❌ [AGENT:${agentName.toUpperCase()}] Error with agent:`, error.message);
